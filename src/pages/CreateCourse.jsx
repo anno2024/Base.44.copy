@@ -50,13 +50,14 @@ export default function CreateCourse() {
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     for (const file of files) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url, content_text } = await base44.integrations.Core.UploadFile({ file });
       setFormData(prev => ({
         ...prev,
         content_sources: [...prev.content_sources, {
           name: file.name,
           type: file.type.includes('pdf') ? 'pdf' : 'document',
-          url: file_url
+          url: file_url,
+          content_text
         }]
       }));
     }

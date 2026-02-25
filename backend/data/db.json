@@ -1,0 +1,311 @@
+{
+  "users": [
+    {
+      "id": "u-instructor",
+      "email": "teacher@example.com",
+      "full_name": "Instructor Demo",
+      "role": "admin",
+      "token": "instructor-token",
+      "created_date": "2026-02-25T12:45:56.905Z"
+    },
+    {
+      "id": "u-student",
+      "email": "student@example.com",
+      "full_name": "Student Demo",
+      "role": "student",
+      "token": "student-token",
+      "created_date": "2026-02-25T12:45:56.913Z"
+    }
+  ],
+  "courses": [
+    {
+      "id": "1e65b038-ea2e-430b-86e2-f92f13176be6",
+      "created_date": "2026-02-25T12:54:51.088Z",
+      "updated_date": "2026-02-25T12:54:51.088Z",
+      "name": "Smoke Course",
+      "code": "SMK101",
+      "description": "test",
+      "instructor_id": "u-instructor",
+      "llm_config": {
+        "hint_only_mode": true
+      },
+      "content_sources": [
+        {
+          "name": "Inline",
+          "type": "text",
+          "url": "inline",
+          "content_text": "Derivasjon er endringsrate."
+        }
+      ]
+    },
+    {
+      "id": "98ba0e1a-65f8-4896-bd22-2b61a8512404",
+      "created_date": "2026-02-25T13:05:20.570Z",
+      "updated_date": "2026-02-25T13:05:20.570Z",
+      "name": "test",
+      "code": "tst1234",
+      "description": "",
+      "llm_config": {
+        "hint_only_mode": true,
+        "language": "English",
+        "tone": "friendly",
+        "max_help_level": "explanation",
+        "custom_instructions": ""
+      },
+      "content_sources": [
+        {
+          "name": "advanced_solid_state_physics.pdf",
+          "type": "pdf",
+          "url": "http://localhost:4000/uploads/1772024715557-advanced_solid_state_physics.pdf",
+          "content_text": ""
+        }
+      ],
+      "instructor_id": "u-instructor"
+    }
+  ],
+  "courseEnrollments": [
+    {
+      "id": "542a0581-4f89-4051-982f-5e9f791c490d",
+      "created_date": "2026-02-25T13:06:13.561Z",
+      "updated_date": "2026-02-25T13:06:13.561Z",
+      "course_id": "98ba0e1a-65f8-4896-bd22-2b61a8512404",
+      "student_id": "u-student",
+      "student_email": "student@example.com",
+      "enrolled_at": "2026-02-25T13:06:13.556Z"
+    }
+  ],
+  "chatSessions": [
+    {
+      "id": "921d01b1-fe3b-4fea-8f56-3a2627a72250",
+      "created_date": "2026-02-25T13:06:21.979Z",
+      "updated_date": "2026-02-25T13:06:51.290Z",
+      "course_id": "98ba0e1a-65f8-4896-bd22-2b61a8512404",
+      "student_id": "u-student",
+      "student_email": "student@example.com",
+      "title": "hei",
+      "messages": [
+        {
+          "role": "user",
+          "content": "hei",
+          "timestamp": "2026-02-25T13:06:24.422Z"
+        },
+        {
+          "role": "assistant",
+          "content": "It seems like we've started our conversation, but I'm not sure what \"hei\" refers to in the context of your question. Could you please provide more information or clarify what you're asking about?\n\nIf you're referring to a specific topic or concept related to course \"test\" (tst1234), I'd be happy to try and assist you further.\n\nTo get started, can you tell me what subject area or topic is covered in the course? Is it mathematics, science, literature, or something else?",
+          "timestamp": "2026-02-25T13:06:51.174Z"
+        }
+      ],
+      "status": "active",
+      "duration_minutes": 0
+    },
+    {
+      "id": "3486b6af-73a2-47ad-8602-dd0ff4529bfc",
+      "created_date": "2026-02-25T13:09:26.037Z",
+      "updated_date": "2026-02-25T13:10:20.911Z",
+      "course_id": "98ba0e1a-65f8-4896-bd22-2b61a8512404",
+      "student_id": "u-student",
+      "student_email": "student@example.com",
+      "title": "hei, kan du hjelpe meg med faget mitt",
+      "messages": [
+        {
+          "role": "user",
+          "content": "hei, kan du hjelpe meg med faget mitt",
+          "timestamp": "2026-02-25T13:09:35.508Z"
+        },
+        {
+          "role": "assistant",
+          "content": "Jeg kan gi deg et hint i stedet for fasit: Finn nøkkelbegrepene i spørsmålet, koble dem til pensum, og forklar hvorfor hvert steg er riktig. Spørsmål: hei, kan du hjelpe meg med faget mitt",
+          "timestamp": "2026-02-25T13:10:20.845Z"
+        }
+      ],
+      "status": "active",
+      "duration_minutes": 1
+    }
+  ],
+  "assignments": [
+    {
+      "id": "5da541dc-993c-4439-b549-0f978262d368",
+      "created_date": "2026-02-25T12:54:51.195Z",
+      "updated_date": "2026-02-25T12:54:51.195Z",
+      "course_id": "1e65b038-ea2e-430b-86e2-f92f13176be6",
+      "title": "A1",
+      "questions": [
+        {
+          "id": "q1",
+          "text": "Forklar derivasjon"
+        }
+      ]
+    }
+  ],
+  "submissions": [],
+  "flashcards": [],
+  "uploads": [
+    {
+      "id": "18932fb7-ef66-46b0-a2ea-f264b8fb92e6",
+      "created_date": "2026-02-25T13:05:15.577Z",
+      "updated_date": "2026-02-25T13:05:15.577Z",
+      "uploaded_by": "u-instructor",
+      "name": "advanced_solid_state_physics.pdf",
+      "mimetype": "application/pdf",
+      "file_url": "http://localhost:4000/uploads/1772024715557-advanced_solid_state_physics.pdf",
+      "file_path": "/Users/elisabellah/repos/Base.44.copy/backend/uploads/1772024715557-advanced_solid_state_physics.pdf",
+      "content_text": ""
+    }
+  ],
+  "appLogs": [
+    {
+      "id": "51ecc4e1-86b1-48da-b8fe-c4917a34eaea",
+      "created_date": "2026-02-25T12:58:33.094Z",
+      "updated_date": "2026-02-25T12:58:33.094Z",
+      "user_id": "u-instructor",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "7957cb0e-27eb-4dbe-9886-29b23e0fdc9e",
+      "created_date": "2026-02-25T13:04:31.571Z",
+      "updated_date": "2026-02-25T13:04:31.571Z",
+      "user_id": "u-instructor",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "4d802140-4fa0-423c-8caa-d6768a199bd7",
+      "created_date": "2026-02-25T13:04:37.753Z",
+      "updated_date": "2026-02-25T13:04:37.753Z",
+      "user_id": "u-instructor",
+      "pageName": "CreateCourse"
+    },
+    {
+      "id": "b09eda9a-4ebf-405f-9a02-fffa3561d9a2",
+      "created_date": "2026-02-25T13:05:20.678Z",
+      "updated_date": "2026-02-25T13:05:20.678Z",
+      "user_id": "u-instructor",
+      "pageName": "CourseManagement"
+    },
+    {
+      "id": "18dcb0ae-4fd8-4e73-abab-2f8e7450e2f5",
+      "created_date": "2026-02-25T13:05:52.637Z",
+      "updated_date": "2026-02-25T13:05:52.637Z",
+      "user_id": "u-instructor",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "6ffbbb79-f383-43a9-94f4-59471569b24b",
+      "created_date": "2026-02-25T13:05:56.004Z",
+      "updated_date": "2026-02-25T13:05:56.004Z",
+      "user_id": "u-instructor",
+      "pageName": "CourseManagement"
+    },
+    {
+      "id": "3b777554-157a-41a4-990e-f8434a61315e",
+      "created_date": "2026-02-25T13:06:10.179Z",
+      "updated_date": "2026-02-25T13:06:10.179Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "81033ea3-c9aa-49f9-9030-9abdbaebd139",
+      "created_date": "2026-02-25T13:06:12.073Z",
+      "updated_date": "2026-02-25T13:06:12.073Z",
+      "user_id": "u-student",
+      "pageName": "BrowseCourses"
+    },
+    {
+      "id": "91a03af2-8849-4f0f-bb2a-b38979efe487",
+      "created_date": "2026-02-25T13:06:17.852Z",
+      "updated_date": "2026-02-25T13:06:17.852Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "1266fe8a-4370-4921-aff8-f027af4fd57c",
+      "created_date": "2026-02-25T13:06:19.552Z",
+      "updated_date": "2026-02-25T13:06:19.552Z",
+      "user_id": "u-student",
+      "pageName": "StudentCourse"
+    },
+    {
+      "id": "534ad5ac-af0f-4362-89a4-44ed3d4dbddf",
+      "created_date": "2026-02-25T13:08:00.052Z",
+      "updated_date": "2026-02-25T13:08:00.052Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "795d3075-af2c-4e87-b8a9-aeba459145e9",
+      "created_date": "2026-02-25T13:08:07.578Z",
+      "updated_date": "2026-02-25T13:08:07.578Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "ba073969-2475-4d2f-8faa-78972cd1694d",
+      "created_date": "2026-02-25T13:09:14.680Z",
+      "updated_date": "2026-02-25T13:09:14.680Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "3ae9222f-086e-4470-80fb-c1ded0bd80fc",
+      "created_date": "2026-02-25T13:09:18.091Z",
+      "updated_date": "2026-02-25T13:09:18.091Z",
+      "user_id": "u-student",
+      "pageName": "StudentCourse"
+    },
+    {
+      "id": "51895c90-5ab1-4267-a291-fccd7e225e6f",
+      "created_date": "2026-02-25T13:10:18.619Z",
+      "updated_date": "2026-02-25T13:10:18.619Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "541188ab-cb4b-4be5-acc5-7f3694c99952",
+      "created_date": "2026-02-25T13:10:26.598Z",
+      "updated_date": "2026-02-25T13:10:26.598Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "264dfbe0-c8b8-4cc6-a579-d1ccc7192bb8",
+      "created_date": "2026-02-25T13:10:43.409Z",
+      "updated_date": "2026-02-25T13:10:43.409Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "c4a9312d-e7c2-4367-9085-9f375c24df32",
+      "created_date": "2026-02-25T13:10:57.023Z",
+      "updated_date": "2026-02-25T13:10:57.023Z",
+      "user_id": "u-student",
+      "pageName": "StudentCourse"
+    },
+    {
+      "id": "17525b72-0206-4852-89a8-bbd6db2b6597",
+      "created_date": "2026-02-25T13:11:28.864Z",
+      "updated_date": "2026-02-25T13:11:28.864Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "40dbb1bd-8ab6-434a-8f4d-0ad935110a32",
+      "created_date": "2026-02-25T13:11:59.102Z",
+      "updated_date": "2026-02-25T13:11:59.102Z",
+      "user_id": "u-instructor",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "1200bb59-a06b-4629-9976-fff252a159c7",
+      "created_date": "2026-02-25T13:12:03.538Z",
+      "updated_date": "2026-02-25T13:12:03.538Z",
+      "user_id": "u-instructor",
+      "pageName": "CourseManagement"
+    },
+    {
+      "id": "4cc87da4-1261-4237-9ef4-e14b6343a381",
+      "created_date": "2026-02-25T13:12:45.610Z",
+      "updated_date": "2026-02-25T13:12:45.610Z",
+      "user_id": "u-instructor",
+      "pageName": "Dashboard"
+    }
+  ]
+}

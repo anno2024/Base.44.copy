@@ -23,6 +23,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+
 export default function StudentCourse() {
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
@@ -113,37 +115,30 @@ export default function StudentCourse() {
     setMessage('');
     setIsStreaming(true);
 
-    const config = course.llm_config || {};
-    let systemPrompt = `You are an AI learning assistant for the course "${course.name}" (${course.code}).
+    const token = window.localStorage.getItem('base44_access_token') || '';
 
-Your configuration:
-- Language: ${config.language || 'English'}
-- Tone: ${config.tone || 'friendly'}
-- Help Level: ${config.max_help_level || 'explanation'}
-${config.hint_only_mode ? '- IMPORTANT: You are in hint-only mode. NEVER give direct answers. Instead, guide the student with questions, hints, and explanations that help them discover the answer themselves.' : ''}
-
-${config.custom_instructions ? `Additional instructions: ${config.custom_instructions}` : ''}
-
-Course description: ${course.description || 'No description provided'}
-
-Remember:
-1. Be ${config.tone === 'socratic' ? 'deeply questioning - respond with questions that make the student think' : config.tone === 'formal' ? 'professional and academic' : 'warm and encouraging'}
-2. Reference course material when possible
-3. ${config.hint_only_mode ? 'Guide through hints, never give direct answers' : 'Provide clear explanations'}
-4. Encourage critical thinking and active learning`;
-
-    const conversationHistory = updatedMessages.map(m => 
-      `${m.role === 'user' ? 'Student' : 'Assistant'}: ${m.content}`
-    ).join('\n\n');
-
-    const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `${systemPrompt}\n\nConversation history:\n${conversationHistory}\n\nRespond to the student's last message.`,
-      add_context_from_internet: false
+    const response = await fetch(`${API_BASE_URL}/api/chat/respond`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        course_id: courseId,
+        message,
+        conversation: updatedMessages
+      })
     });
+
+    if (!response.ok) {
+      throw new Error('Chat request failed');
+    }
+
+    const payload = await response.json();
 
     const assistantMessage = {
       role: 'assistant',
-      content: response,
+      content: payload.answer,
       timestamp: new Date().toISOString()
     };
 

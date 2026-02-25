@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    container_name: base44-backend
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    restart: unless-stopped

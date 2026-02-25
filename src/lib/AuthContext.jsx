@@ -1,7 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
 const AuthContext = createContext();
 
@@ -24,21 +25,30 @@ export const AuthProvider = ({ children }) => {
       
       // First, check app public settings (with token if available)
       // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
       try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
+        const appId = appParams.appId || 'local-app';
+        const token = window.localStorage.getItem('base44_access_token') || appParams.token || '';
+        const response = await fetch(`${API_BASE_URL}/api/apps/public/prod/public-settings/by-id/${appId}`, {
+          headers: {
+            'X-App-Id': appId,
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          const err = new Error(body.message || 'Failed to load app settings');
+          err.status = response.status;
+          err.data = body;
+          throw err;
+        }
+
+        const publicSettings = await response.json();
         setAppPublicSettings(publicSettings);
         
         // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
+        const hasToken = Boolean(window.localStorage.getItem('base44_access_token') || appParams.token);
+        if (hasToken) {
           await checkUserAuth();
         } else {
           setIsLoadingAuth(false);
@@ -123,9 +133,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const navigateToLogin = () => {
+  const navigateToLogin = (role) => {
     // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
+    base44.auth.redirectToLogin(role);
   };
 
   return (

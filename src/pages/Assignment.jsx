@@ -9,15 +9,15 @@ import {
   Loader2,
   CheckCircle,
   Lightbulb,
-  TrendingUp,
-  MessageSquare
+  TrendingUp
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import ReactMarkdown from 'react-markdown';
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
 export default function Assignment() {
   const queryClient = useQueryClient();
@@ -40,15 +40,6 @@ export default function Assignment() {
       return assignments[0];
     },
     enabled: !!assignmentId
-  });
-
-  const { data: course } = useQuery({
-    queryKey: ['course', assignment?.course_id],
-    queryFn: async () => {
-      const courses = await base44.entities.Course.filter({ id: assignment?.course_id });
-      return courses[0];
-    },
-    enabled: !!assignment?.course_id
   });
 
   const { data: existingSubmission } = useQuery({
@@ -96,59 +87,27 @@ export default function Assignment() {
       answer_text: answerText
     }));
 
-    // Generate AI feedback
-    const feedbackPrompt = `You are evaluating a student's assignment submission for the course "${course?.name}".
-
-Assignment: ${assignment.title}
-${assignment.description ? `Description: ${assignment.description}` : ''}
-
-Questions and Student Answers:
-${assignment.questions?.map((q, i) => `
-Question ${i + 1}: ${q.text}
-${q.rubric ? `Rubric: ${q.rubric}` : ''}
-Student's Answer: ${answers[q.id] || '[No answer provided]'}
-`).join('\n')}
-
-Provide constructive feedback in the following JSON format:
-{
-  "overall_comment": "Brief overall assessment",
-  "strengths": ["List of things done well"],
-  "improvements": ["List of areas for improvement"],
-  "question_feedback": [
-    {"question_id": "q_id", "comment": "Specific feedback for this answer", "score": 0-100}
-  ]
-}
-
-${course?.llm_config?.hint_only_mode ? 'Remember: Do not give away answers. Provide guidance that helps the student improve their understanding.' : ''}`;
-
-    const feedbackResponse = await base44.integrations.Core.InvokeLLM({
-      prompt: feedbackPrompt,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          overall_comment: { type: "string" },
-          strengths: { type: "array", items: { type: "string" } },
-          improvements: { type: "array", items: { type: "string" } },
-          question_feedback: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                question_id: { type: "string" },
-                comment: { type: "string" },
-                score: { type: "number" }
-              }
-            }
-          }
-        }
-      }
+    const token = window.localStorage.getItem('base44_access_token') || '';
+    const feedbackResponse = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/generate-feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ answers: answersArray })
     });
+
+    if (!feedbackResponse.ok) {
+      throw new Error('Feedback generation failed');
+    }
+
+    const feedbackPayload = await feedbackResponse.json();
 
     const timeSpent = Math.round((Date.now() - startTime) / 60000);
 
     await submitMutation.mutateAsync({
       answers: answersArray,
-      feedback: feedbackResponse,
+      feedback: feedbackPayload.feedback,
       time_spent_minutes: existingSubmission?.time_spent_minutes 
         ? existingSubmission.time_spent_minutes + timeSpent 
         : timeSpent,

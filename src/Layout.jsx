@@ -3,12 +3,10 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { 
-  BookOpen, 
   LayoutDashboard, 
   Search,
   LogOut,
   ChevronDown,
-  User,
   Sparkles
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";

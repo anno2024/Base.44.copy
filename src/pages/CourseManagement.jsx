@@ -10,16 +10,11 @@ import {
   MessageSquare, 
   FileText,
   Clock,
-  TrendingUp,
   Plus,
-  Trash2,
   Edit3,
   BarChart3,
   BookOpen,
-  Sparkles,
-  CheckCircle,
-  AlertCircle,
-  Download
+  Sparkles
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
