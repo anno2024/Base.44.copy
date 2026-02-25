@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  student
+}
+
+enum FlashcardDifficulty {
+  easy
+  medium
+  hard
+}
+
+enum SubmissionStatus {
+  draft
+  submitted
+  reviewed
+}
+
+enum ChatSessionStatus {
+  active
+  completed
+}
+
+model User {
+  id             String             @id @default(cuid())
+  email          String             @unique
+  full_name      String
+  role           UserRole           @default(student)
+  password_hash  String
+  created_at     DateTime           @default(now())
+  updated_at     DateTime           @updatedAt
+
+  courses        Course[]           @relation("CourseInstructor")
+  enrollments    CourseEnrollment[]
+  chat_sessions  ChatSession[]      @relation("ChatSessionStudent")
+  submissions    Submission[]
+}
+
+model Course {
+  id               String                @id @default(cuid())
+  app_id           String                @default("base-44-app")
+  name             String
+  code             String
+  description      String?
+  instructor_id    String
+  llm_config       Json?
+  content_sources  Json?
+  created_at       DateTime              @default(now())
+  updated_at       DateTime              @updatedAt
+
+  instructor       User                  @relation("CourseInstructor", fields: [instructor_id], references: [id])
+  enrollments      CourseEnrollment[]
+  assignments      Assignment[]
+  sessions         ChatSession[]
+  flashcards       Flashcard[]
+  sources          CourseSource[]
+  material_chunks  CourseMaterialChunk[]
+
+  @@unique([app_id, code])
+}
+
+model CourseEnrollment {
+  id            String   @id @default(cuid())
+  course_id     String
+  student_id    String
+  student_email String?
+  enrolled_at   DateTime @default(now())
+
+  course        Course   @relation(fields: [course_id], references: [id])
+  student       User     @relation(fields: [student_id], references: [id])
+
+  @@unique([course_id, student_id])
+}
+
+model Assignment {
+  id                   String    @id @default(cuid())
+  course_id            String
+  title                String
+  description          String?
+  questions            Json?
+  due_date             DateTime?
+  feedback_structure   Json?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+
+  course               Course    @relation(fields: [course_id], references: [id])
+  submissions          Submission[]
+}
+
+model Submission {
+  id                  String            @id @default(cuid())
+  assignment_id       String
+  student_id          String
+  student_email       String?
+  answers             Json?
+  feedback            Json?
+  time_spent_minutes  Int?              @default(0)
+  status              SubmissionStatus  @default(draft)
+  created_at          DateTime          @default(now())
+  updated_at          DateTime          @updatedAt
+
+  assignment          Assignment        @relation(fields: [assignment_id], references: [id])
+  student             User              @relation(fields: [student_id], references: [id])
+}
+
+model ChatSession {
+  id                String             @id @default(cuid())
+  course_id         String
+  student_id        String
+  student_email     String?
+  title             String?
+  messages          Json?
+  duration_minutes  Int?               @default(0)
+  topics_discussed  Json?
+  status            ChatSessionStatus  @default(active)
+  created_at        DateTime           @default(now())
+  updated_at        DateTime           @updatedAt
+
+  course            Course             @relation(fields: [course_id], references: [id])
+  student           User               @relation("ChatSessionStudent", fields: [student_id], references: [id])
+}
+
+model Flashcard {
+  id          String              @id @default(cuid())
+  course_id   String
+  front       String
+  back        String
+  topic       String?
+  difficulty  FlashcardDifficulty @default(medium)
+  verified    Boolean             @default(false)
+  shared      Boolean             @default(false)
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+
+  course      Course              @relation(fields: [course_id], references: [id])
+}
+
+model UploadedFile {
+  id             String   @id @default(cuid())
+  original_name  String
+  mime_type      String
+  storage_path   String
+  size_bytes     Int
+  sha256         String
+  extracted_text String?
+  preview_text   String?
+  created_at     DateTime @default(now())
+
+  chunks         UploadedFileChunk[]
+  sources        CourseSource[]
+}
+
+model UploadedFileChunk {
+  id          String  @id @default(cuid())
+  upload_id   String
+  chunk_index Int
+  content     String
+  embedding   String
+  created_at  DateTime @default(now())
+
+  upload      UploadedFile @relation(fields: [upload_id], references: [id], onDelete: Cascade)
+}
+
+model CourseSource {
+  id             String   @id @default(cuid())
+  course_id      String
+  upload_id      String?
+  title          String
+  type           String
+  url            String?
+  content_text   String?
+  created_at     DateTime @default(now())
+
+  course         Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  upload         UploadedFile? @relation(fields: [upload_id], references: [id])
+  chunks         CourseMaterialChunk[]
+}
+
+model CourseMaterialChunk {
+  id           String  @id @default(cuid())
+  course_id    String
+  source_id    String
+  chunk_index  Int
+  content      String
+  embedding    String
+  created_at   DateTime @default(now())
+
+  course       Course       @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  source       CourseSource @relation(fields: [source_id], references: [id], onDelete: Cascade)
+}
