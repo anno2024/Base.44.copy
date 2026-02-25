@@ -1,0 +1,62 @@
+{
+  "name": "ChatSession",
+  "type": "object",
+  "properties": {
+    "course_id": {
+      "type": "string",
+      "description": "Reference to the course"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "Student user ID"
+    },
+    "student_email": {
+      "type": "string",
+      "description": "Student email for display"
+    },
+    "title": {
+      "type": "string",
+      "description": "Session title/topic"
+    },
+    "messages": {
+      "type": "array",
+      "description": "Chat messages",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Total time spent in session"
+    },
+    "topics_discussed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "course_id",
+    "student_id"
+  ]
+}

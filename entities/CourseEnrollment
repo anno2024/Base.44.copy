@@ -1,0 +1,25 @@
+{
+  "name": "CourseEnrollment",
+  "type": "object",
+  "properties": {
+    "course_id": {
+      "type": "string",
+      "description": "Reference to the course"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "Student user ID"
+    },
+    "student_email": {
+      "type": "string"
+    },
+    "enrolled_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "course_id",
+    "student_id"
+  ]
+}

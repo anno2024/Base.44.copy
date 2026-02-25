@@ -1,0 +1,74 @@
+{
+  "name": "Course",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Course name"
+    },
+    "code": {
+      "type": "string",
+      "description": "Course code (e.g., TDT4140)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Course description"
+    },
+    "instructor_id": {
+      "type": "string",
+      "description": "ID of the instructor who created the course"
+    },
+    "llm_config": {
+      "type": "object",
+      "description": "LLM configuration settings",
+      "properties": {
+        "hint_only_mode": {
+          "type": "boolean",
+          "description": "If true, never give direct answers"
+        },
+        "language": {
+          "type": "string",
+          "description": "Response language"
+        },
+        "tone": {
+          "type": "string",
+          "description": "Communication tone (friendly, formal, socratic)"
+        },
+        "max_help_level": {
+          "type": "string",
+          "description": "Maximum level of help (hint, explanation, solution)"
+        },
+        "custom_instructions": {
+          "type": "string",
+          "description": "Additional custom instructions for the LLM"
+        }
+      }
+    },
+    "content_sources": {
+      "type": "array",
+      "description": "Uploaded content files and links",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "content_text": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "code",
+    "instructor_id"
+  ]
+}

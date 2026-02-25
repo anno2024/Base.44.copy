@@ -1,0 +1,86 @@
+{
+  "name": "Submission",
+  "type": "object",
+  "properties": {
+    "assignment_id": {
+      "type": "string",
+      "description": "Reference to the assignment"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "Student user ID"
+    },
+    "student_email": {
+      "type": "string"
+    },
+    "answers": {
+      "type": "array",
+      "description": "Student answers",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_id": {
+            "type": "string"
+          },
+          "answer_text": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "feedback": {
+      "type": "object",
+      "description": "AI-generated feedback",
+      "properties": {
+        "overall_comment": {
+          "type": "string"
+        },
+        "strengths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "improvements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "question_feedback": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question_id": {
+                "type": "string"
+              },
+              "comment": {
+                "type": "string"
+              },
+              "score": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "time_spent_minutes": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "submitted",
+        "reviewed"
+      ],
+      "default": "draft"
+    }
+  },
+  "required": [
+    "assignment_id",
+    "student_id"
+  ]
+}

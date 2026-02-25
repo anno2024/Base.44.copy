@@ -1,0 +1,46 @@
+{
+  "name": "Flashcard",
+  "type": "object",
+  "properties": {
+    "course_id": {
+      "type": "string",
+      "description": "Reference to the course"
+    },
+    "front": {
+      "type": "string",
+      "description": "Question or prompt"
+    },
+    "back": {
+      "type": "string",
+      "description": "Answer or explanation"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Topic category"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "default": "medium"
+    },
+    "verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether instructor has verified this card"
+    },
+    "shared": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether card is shared with students"
+    }
+  },
+  "required": [
+    "course_id",
+    "front",
+    "back"
+  ]
+}
