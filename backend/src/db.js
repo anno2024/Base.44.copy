@@ -1,8 +1,8 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import fs from "node:fs/promises";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
 
-const DB_PATH = path.resolve(process.cwd(), 'data/db.json');
+const DB_PATH = path.resolve(process.cwd(), "data/db.json");
 const DB_DIR = path.dirname(DB_PATH);
 
 function createInitialData() {
@@ -10,21 +10,21 @@ function createInitialData() {
   return {
     users: [
       {
-        id: 'u-instructor',
-        email: 'teacher@example.com',
-        full_name: 'Instructor Demo',
-        role: 'admin',
-        token: 'instructor-token',
-        created_date: now
+        id: "u-instructor",
+        email: "teacher@example.com",
+        full_name: "Instructor Demo",
+        role: "admin",
+        token: "instructor-token",
+        created_date: now,
       },
       {
-        id: 'u-student',
-        email: 'student@example.com',
-        full_name: 'Student Demo',
-        role: 'student',
-        token: 'student-token',
-        created_date: now
-      }
+        id: "u-student",
+        email: "student@example.com",
+        full_name: "Student Demo",
+        role: "student",
+        token: "student-token",
+        created_date: now,
+      },
     ],
     courses: [],
     courseEnrollments: [],
@@ -33,7 +33,7 @@ function createInitialData() {
     submissions: [],
     flashcards: [],
     uploads: [],
-    appLogs: []
+    appLogs: [],
   };
 }
 
@@ -44,29 +44,31 @@ function normalizeDbShape(db) {
     ...db,
     users: Array.isArray(db?.users) ? db.users : base.users,
     courses: Array.isArray(db?.courses) ? db.courses : [],
-    courseEnrollments: Array.isArray(db?.courseEnrollments) ? db.courseEnrollments : [],
+    courseEnrollments: Array.isArray(db?.courseEnrollments)
+      ? db.courseEnrollments
+      : [],
     chatSessions: Array.isArray(db?.chatSessions) ? db.chatSessions : [],
     assignments: Array.isArray(db?.assignments) ? db.assignments : [],
     submissions: Array.isArray(db?.submissions) ? db.submissions : [],
     flashcards: Array.isArray(db?.flashcards) ? db.flashcards : [],
     uploads: Array.isArray(db?.uploads) ? db.uploads : [],
-    appLogs: Array.isArray(db?.appLogs) ? db.appLogs : []
+    appLogs: Array.isArray(db?.appLogs) ? db.appLogs : [],
   };
 }
 
 async function writeDbFileAtomically(data) {
   const tempPath = path.join(DB_DIR, `db.${Date.now()}.tmp`);
-  await fs.writeFile(tempPath, JSON.stringify(data, null, 2), 'utf-8');
+  await fs.writeFile(tempPath, JSON.stringify(data, null, 2), "utf-8");
   await fs.rename(tempPath, DB_PATH);
 }
 
 const entityMap = {
-  Course: 'courses',
-  CourseEnrollment: 'courseEnrollments',
-  ChatSession: 'chatSessions',
-  Assignment: 'assignments',
-  Submission: 'submissions',
-  Flashcard: 'flashcards'
+  Course: "courses",
+  CourseEnrollment: "courseEnrollments",
+  ChatSession: "chatSessions",
+  Assignment: "assignments",
+  Submission: "submissions",
+  Flashcard: "flashcards",
 };
 
 let writeQueue = Promise.resolve();
@@ -82,13 +84,16 @@ async function ensureDb() {
 
 export async function readDb() {
   await ensureDb();
-  const raw = await fs.readFile(DB_PATH, 'utf-8');
+  const raw = await fs.readFile(DB_PATH, "utf-8");
 
   try {
     return normalizeDbShape(JSON.parse(raw));
   } catch {
-    const corruptBackupPath = path.join(DB_DIR, `db.corrupt.${Date.now()}.json`);
-    await fs.writeFile(corruptBackupPath, raw, 'utf-8');
+    const corruptBackupPath = path.join(
+      DB_DIR,
+      `db.corrupt.${Date.now()}.json`,
+    );
+    await fs.writeFile(corruptBackupPath, raw, "utf-8");
 
     const repaired = createInitialData();
     await writeDbFileAtomically(repaired);
@@ -122,7 +127,7 @@ export function withAuditFields(input, existing = null) {
       id: randomUUID(),
       created_date: now,
       updated_date: now,
-      ...input
+      ...input,
     };
   }
   return {
@@ -130,18 +135,20 @@ export function withAuditFields(input, existing = null) {
     ...input,
     id: existing.id,
     created_date: existing.created_date,
-    updated_date: now
+    updated_date: now,
   };
 }
 
 export function pickUserFromToken(db, token) {
   if (!token) return null;
-  return db.users.find((user) => user.token === token || user.id === token) ?? null;
+  return (
+    db.users.find((user) => user.token === token || user.id === token) ?? null
+  );
 }
 
-export function applySort(items, sort = '') {
+export function applySort(items, sort = "") {
   if (!sort) return [...items];
-  const desc = sort.startsWith('-');
+  const desc = sort.startsWith("-");
   const key = desc ? sort.slice(1) : sort;
   return [...items].sort((a, b) => {
     const left = a?.[key];
@@ -154,7 +161,9 @@ export function applySort(items, sort = '') {
 }
 
 export function applyFilter(items, filter = {}) {
-  const entries = Object.entries(filter).filter(([, value]) => value !== undefined && value !== null && value !== '');
+  const entries = Object.entries(filter).filter(
+    ([, value]) => value !== undefined && value !== null && value !== "",
+  );
   if (entries.length === 0) return [...items];
   return items.filter((item) =>
     entries.every(([key, value]) => {
@@ -162,7 +171,7 @@ export function applyFilter(items, filter = {}) {
         return value.includes(item[key]);
       }
       return item[key] === value;
-    })
+    }),
   );
 }
 

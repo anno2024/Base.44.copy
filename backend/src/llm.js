@@ -11,29 +11,33 @@ async function withTimeout(promise, timeoutMs = DEFAULT_TIMEOUT_MS) {
   }
 }
 
-export async function invokeOllama({ prompt, systemPrompt = '', responseFormat = 'text' }) {
-  const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-  const model = process.env.OLLAMA_MODEL || 'llama3.1:8b';
+export async function invokeOllama({
+  prompt,
+  systemPrompt = "",
+  responseFormat = "text",
+}) {
+  const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+  const model = process.env.OLLAMA_MODEL || "llama3.1:8b";
 
   const payload = {
     model,
     prompt,
     stream: false,
     system: systemPrompt || undefined,
-    format: responseFormat === 'json' ? 'json' : undefined,
+    format: responseFormat === "json" ? "json" : undefined,
     options: {
-      temperature: 0.2
-    }
+      temperature: 0.2,
+    },
   };
 
   try {
     const response = await withTimeout((signal) =>
       fetch(`${baseUrl}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        signal
-      })
+        signal,
+      }),
     );
 
     if (!response.ok) {
@@ -41,7 +45,7 @@ export async function invokeOllama({ prompt, systemPrompt = '', responseFormat =
     }
 
     const data = await response.json();
-    return data.response?.trim() || '';
+    return data.response?.trim() || "";
   } catch (error) {
     throw new Error(`Local LLM unavailable (${error.message})`);
   }

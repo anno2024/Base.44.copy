@@ -1,14 +1,14 @@
 function normalize(text) {
   return text
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
 function tokenize(text) {
   return normalize(text)
-    .split(' ')
+    .split(" ")
     .filter((token) => token.length > 2);
 }
 
@@ -51,14 +51,14 @@ export function buildRagContext({ question, sources, topK = 4 }) {
   const candidates = [];
 
   for (const source of sources) {
-    const chunks = chunkText(source.content_text || '');
+    const chunks = chunkText(source.content_text || "");
     for (const chunk of chunks) {
       const score = scoreChunk(chunk, queryTokens);
       if (score > 0) {
         candidates.push({
           score,
           text: chunk,
-          sourceName: source.name || source.url || 'Unknown source'
+          sourceName: source.name || source.url || "Unknown source",
         });
       }
     }
@@ -69,7 +69,10 @@ export function buildRagContext({ question, sources, topK = 4 }) {
   return {
     snippets: selected,
     contextText: selected
-      .map((item, index) => `[Kilde ${index + 1}: ${item.sourceName}]\n${item.text}`)
-      .join('\n\n')
+      .map(
+        (item, index) =>
+          `[Kilde ${index + 1}: ${item.sourceName}]\n${item.text}`,
+      )
+      .join("\n\n"),
   };
 }
