@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const CHAT_REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_CHAT_TIMEOUT_MS || 60000);
 
 export default function StudentCourse() {
   const queryClient = useQueryClient();
@@ -38,7 +39,7 @@ export default function StudentCourse() {
   const [sessionStartTime, setSessionStartTime] = useState(null);
 
   useEffect(() => {
-    base44.auth.me().then(setUser);
+    base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
   const { data: course, isLoading } = useQuery({
@@ -86,6 +87,7 @@ export default function StudentCourse() {
   });
 
   const startNewChat = () => {
+    if (!user?.id) return;
     createSessionMutation.mutate({
       course_id: courseId,
       student_id: user.id,
@@ -102,11 +104,12 @@ export default function StudentCourse() {
   };
 
   const sendMessage = async () => {
-    if (!message.trim() || !activeSession) return;
+    if (!message.trim() || !activeSession || !courseId) return;
     
+    const submittedMessage = message.trim();
     const userMessage = {
       role: 'user',
-      content: message,
+      content: submittedMessage,
       timestamp: new Date().toISOString()
     };
 
@@ -116,50 +119,72 @@ export default function StudentCourse() {
     setIsStreaming(true);
 
     const token = window.localStorage.getItem('base44_access_token') || '';
+    let timeoutId;
 
-    const response = await fetch(`${API_BASE_URL}/api/chat/respond`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify({
-        course_id: courseId,
-        message,
-        conversation: updatedMessages
-      })
-    });
+    try {
+      const controller = new AbortController();
+      timeoutId = setTimeout(() => controller.abort(), CHAT_REQUEST_TIMEOUT_MS);
+      const response = await fetch(`${API_BASE_URL}/api/chat/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          course_id: courseId,
+          message: submittedMessage,
+          conversation: updatedMessages
+        })
+      });
+      clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      throw new Error('Chat request failed');
-    }
-
-    const payload = await response.json();
-
-    const assistantMessage = {
-      role: 'assistant',
-      content: payload.answer,
-      timestamp: new Date().toISOString()
-    };
-
-    const finalMessages = [...updatedMessages, assistantMessage];
-    
-    // Calculate duration
-    const durationMinutes = sessionStartTime 
-      ? Math.round((Date.now() - sessionStartTime) / 60000) 
-      : 0;
-
-    await updateSessionMutation.mutateAsync({
-      id: activeSession.id,
-      data: { 
-        messages: finalMessages,
-        duration_minutes: durationMinutes,
-        title: updatedMessages[0]?.content?.slice(0, 50) || 'Conversation'
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.message || 'Chat request failed');
       }
-    });
 
-    setActiveSession({...activeSession, messages: finalMessages});
-    setIsStreaming(false);
+      const assistantMessage = {
+        role: 'assistant',
+        content: payload?.answer || 'No answer generated.',
+        citations: Array.isArray(payload?.citations) ? payload.citations : [],
+        timestamp: new Date().toISOString()
+      };
+
+      const finalMessages = [...updatedMessages, assistantMessage];
+      
+      // Calculate duration
+      const durationMinutes = sessionStartTime 
+        ? Math.round((Date.now() - sessionStartTime) / 60000) 
+        : 0;
+
+      await updateSessionMutation.mutateAsync({
+        id: activeSession.id,
+        data: { 
+          messages: finalMessages,
+          duration_minutes: durationMinutes,
+          title: updatedMessages[0]?.content?.slice(0, 50) || 'Conversation'
+        }
+      });
+
+      setActiveSession({...activeSession, messages: finalMessages});
+    } catch (error) {
+      const messageText = error?.name === 'AbortError'
+        ? `Request timed out after ${Math.round(CHAT_REQUEST_TIMEOUT_MS / 1000)} seconds.`
+        : error.message;
+      const assistantMessage = {
+        role: 'assistant',
+        content: `I hit an error while generating a response: ${messageText}. Please try again.`,
+        timestamp: new Date().toISOString()
+      };
+      const finalMessages = [...updatedMessages, assistantMessage];
+      setActiveSession({ ...activeSession, messages: finalMessages });
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      setIsStreaming(false);
+    }
   };
 
   useEffect(() => {
@@ -309,9 +334,24 @@ export default function StudentCourse() {
                                 {msg.role === 'user' ? (
                                   <p className="text-sm">{msg.content}</p>
                                 ) : (
-                                  <ReactMarkdown className="text-sm prose prose-slate prose-sm max-w-none">
-                                    {msg.content}
-                                  </ReactMarkdown>
+                                  <div>
+                                    <ReactMarkdown className="text-sm prose prose-slate prose-sm max-w-none">
+                                      {msg.content}
+                                    </ReactMarkdown>
+                                    {Array.isArray(msg.citations) && msg.citations.length > 0 && (
+                                      <div className="mt-3 pt-3 border-t border-slate-200">
+                                        <p className="text-xs font-semibold text-slate-600 mb-1">Sources</p>
+                                        <ul className="text-xs text-slate-600 space-y-1">
+                                          {msg.citations.map((citation) => (
+                                            <li key={`${citation.id}-${citation.source}-${citation.page ?? 'na'}`}>
+                                              [{citation.id}] {citation.source}
+                                              {Number.isInteger(citation.page) ? `, page ${citation.page}` : ''}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                               {msg.role === 'user' && (

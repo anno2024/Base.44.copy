@@ -4,6 +4,10 @@ import { randomUUID } from "node:crypto";
 
 const DB_PATH = path.resolve(process.cwd(), "data/db.json");
 const DB_DIR = path.dirname(DB_PATH);
+const WRITE_RETRY_DELAY_MS = Number(process.env.DB_WRITE_RETRY_MS || 40);
+const WRITE_RETRY_MAX_ATTEMPTS = Number(
+  process.env.DB_WRITE_RETRY_ATTEMPTS || 8,
+);
 
 function createInitialData() {
   const now = new Date().toISOString();
@@ -34,6 +38,7 @@ function createInitialData() {
     flashcards: [],
     uploads: [],
     appLogs: [],
+    ragChunks: [],
   };
 }
 
@@ -53,13 +58,50 @@ function normalizeDbShape(db) {
     flashcards: Array.isArray(db?.flashcards) ? db.flashcards : [],
     uploads: Array.isArray(db?.uploads) ? db.uploads : [],
     appLogs: Array.isArray(db?.appLogs) ? db.appLogs : [],
+    ragChunks: Array.isArray(db?.ragChunks) ? db.ragChunks : [],
   };
 }
 
 async function writeDbFileAtomically(data) {
+  await fs.mkdir(DB_DIR, { recursive: true });
   const tempPath = path.join(DB_DIR, `db.${Date.now()}.tmp`);
-  await fs.writeFile(tempPath, JSON.stringify(data, null, 2), "utf-8");
-  await fs.rename(tempPath, DB_PATH);
+  const payload = JSON.stringify(data, null, 2);
+  await fs.writeFile(tempPath, payload, "utf-8");
+
+  let lastError = null;
+  for (let attempt = 1; attempt <= WRITE_RETRY_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      await fs.rename(tempPath, DB_PATH);
+      return;
+    } catch (error) {
+      lastError = error;
+      const isRetryable =
+        error?.code === "EPERM" ||
+        error?.code === "EBUSY" ||
+        error?.code === "EACCES";
+
+      if (!isRetryable || attempt === WRITE_RETRY_MAX_ATTEMPTS) {
+        break;
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, WRITE_RETRY_DELAY_MS * attempt),
+      );
+    }
+  }
+
+  try {
+    // Windows can temporarily lock rename target; direct write is safer fallback.
+    await fs.writeFile(DB_PATH, payload, "utf-8");
+  } finally {
+    await fs.unlink(tempPath).catch(() => {});
+  }
+
+  if (lastError) {
+    console.warn(
+      `[db] Atomic rename failed, used direct write fallback (${lastError.code || "unknown"})`,
+    );
+  }
 }
 
 const entityMap = {
@@ -102,13 +144,15 @@ export async function readDb() {
 }
 
 export async function writeDb(updater) {
-  writeQueue = writeQueue.then(async () => {
+  writeQueue = writeQueue
+    .catch(() => null)
+    .then(async () => {
     const current = await readDb();
     const next = await updater(current);
     const normalized = normalizeDbShape(next);
     await writeDbFileAtomically(normalized);
     return normalized;
-  });
+    });
   return writeQueue;
 }
 

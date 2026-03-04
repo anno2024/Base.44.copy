@@ -16,8 +16,14 @@ import {
   parseJsonParam,
 } from "./db.js";
 import { buildPolicyPrompt, enforcePolicyOutput } from "./policy.js";
-import { buildRagContext } from "./rag.js";
-import { invokeOllama, fallbackAnswer } from "./llm.js";
+import {
+  hydrateCourseSources,
+  buildCourseSourcesSignature,
+  buildCourseEmbeddingChunks,
+  buildRagContextFromEmbeddings,
+  buildRagContextLexical,
+} from "./rag.js";
+import { invokeOllama, embedWithOllama, fallbackAnswer } from "./llm.js";
 import { parseFeedbackJson, fallbackFeedback } from "./feedback.js";
 
 const app = express();
@@ -71,6 +77,10 @@ function requireRole(...roles) {
   };
 }
 
+function isInstructorRole(role) {
+  return role === "admin" || role === "instructor";
+}
+
 function canAccessRecord(entity, record, user) {
   if (!user) return false;
   if (user.role === "admin") return true;
@@ -105,15 +115,216 @@ function scopeEntityRead(entity, items, user) {
   return items.filter((item) => canAccessRecord(entity, item, user));
 }
 
-async function extractText(filePath, mimetype) {
-  try {
-    if (mimetype.includes("text") || mimetype.includes("json")) {
-      return await fs.readFile(filePath, "utf-8");
-    }
-    return "";
-  } catch {
-    return "";
+function sanitizeExtractedText(text) {
+  return String(text || "")
+    .replace(/\u0000/g, " ")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function normalizePageNumber(value, fallback) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return Math.trunc(numeric);
   }
+  return fallback;
+}
+
+function normalizePageChunks(pages) {
+  if (!Array.isArray(pages)) return [];
+
+  return pages
+    .map((page, index) => {
+      const text = sanitizeExtractedText(page?.text || page?.content || "");
+      if (!text) return null;
+
+      return {
+        page_number: normalizePageNumber(
+          page?.num ?? page?.page ?? page?.pageNumber,
+          index + 1,
+        ),
+        text,
+      };
+    })
+    .filter(Boolean);
+}
+
+async function extractText(filePath, mimetype) {
+  const normalizedMime = String(mimetype || "").toLowerCase();
+  const ext = path.extname(filePath).toLowerCase();
+
+  const isTextLike =
+    normalizedMime.includes("text") ||
+    normalizedMime.includes("json") ||
+    [".txt", ".md", ".csv", ".json"].includes(ext);
+  const isPdf = normalizedMime.includes("pdf") || ext === ".pdf";
+  const isDocx =
+    normalizedMime.includes(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ) || ext === ".docx";
+
+  try {
+    if (isTextLike) {
+      const text = await fs.readFile(filePath, "utf-8");
+      return { content_text: sanitizeExtractedText(text), content_pages: [] };
+    }
+
+    if (isPdf) {
+      const { PDFParse } = await import("pdf-parse");
+      const file = await fs.readFile(filePath);
+      const parser = new PDFParse({ data: file });
+      let result;
+      try {
+        result = await parser.getText({ parsePageInfo: true });
+      } catch {
+        result = await parser.getText();
+      } finally {
+        await parser.destroy().catch(() => {});
+      }
+
+      const contentText = sanitizeExtractedText(result?.text);
+      const contentPages = normalizePageChunks(result?.pages);
+      return { content_text: contentText, content_pages: contentPages };
+    }
+
+    if (isDocx) {
+      const mammoth = await import("mammoth");
+      const extractor = mammoth.extractRawText || mammoth.default?.extractRawText;
+      const output = await extractor({ path: filePath });
+      return {
+        content_text: sanitizeExtractedText(output?.value),
+        content_pages: [],
+      };
+    }
+
+    return { content_text: "", content_pages: [] };
+  } catch {
+    return { content_text: "", content_pages: [] };
+  }
+}
+
+async function resolveUploadFilePath(upload) {
+  const candidates = [];
+
+  if (upload?.file_path) {
+    candidates.push(upload.file_path);
+  }
+
+  if (upload?.file_url) {
+    try {
+      const url = new URL(upload.file_url);
+      const fileName = path.basename(url.pathname || "");
+      if (fileName) {
+        candidates.push(path.join(uploadDir, fileName));
+      }
+    } catch {
+      // Ignore invalid URL format.
+    }
+  }
+
+  for (const candidate of candidates) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch {
+      // try next candidate
+    }
+  }
+
+  return null;
+}
+
+function isPdfUpload(upload) {
+  const mimetype = String(upload?.mimetype || "").toLowerCase();
+  const fileUrl = String(upload?.file_url || "").toLowerCase();
+  const filePath = String(upload?.file_path || "").toLowerCase();
+  return (
+    mimetype.includes("pdf") ||
+    fileUrl.endsWith(".pdf") ||
+    filePath.endsWith(".pdf")
+  );
+}
+
+const RAG_TOP_K = Number(process.env.RAG_TOP_K || 4);
+const RAG_MAX_CHUNK_CHARS = Number(process.env.RAG_MAX_CHUNK_CHARS || 900);
+const RAG_CHUNK_OVERLAP = Number(process.env.RAG_CHUNK_OVERLAP || 140);
+const RAG_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || "bge-m3";
+const ragIndexJobs = new Map();
+
+function getRagJobKey({ courseId, sourceSignature }) {
+  return `${courseId}:${sourceSignature}:${RAG_EMBED_MODEL}`;
+}
+
+function queueCourseRagIndex({ course, sources, sourceSignature }) {
+  const jobKey = getRagJobKey({ courseId: course.id, sourceSignature });
+  if (ragIndexJobs.has(jobKey)) {
+    return;
+  }
+
+  const textSources = sources.filter((source) => source.content_text?.trim());
+  if (textSources.length === 0) {
+    return;
+  }
+
+  const job = (async () => {
+    try {
+      const createdChunks = await buildCourseEmbeddingChunks({
+        courseId: course.id,
+        sources: textSources,
+        sourceSignature,
+        embeddingModel: RAG_EMBED_MODEL,
+        maxChunkLength: RAG_MAX_CHUNK_CHARS,
+        chunkOverlap: RAG_CHUNK_OVERLAP,
+        embedText: embedWithOllama,
+      });
+
+      if (createdChunks.length > 0) {
+        await writeDb((nextDb) => {
+          nextDb.ragChunks = (nextDb.ragChunks || []).filter(
+            (chunk) =>
+              !(
+                chunk.course_id === course.id &&
+                chunk.embedding_model === RAG_EMBED_MODEL
+              ),
+          );
+          nextDb.ragChunks.push(...createdChunks);
+          return nextDb;
+        });
+      }
+    } catch (error) {
+      console.warn(
+        `[rag] Background indexing failed for course ${course.id}: ${error.message}`,
+      );
+    } finally {
+      ragIndexJobs.delete(jobKey);
+    }
+  })();
+
+  ragIndexJobs.set(jobKey, job);
+}
+
+async function ensureCourseRagChunks({ db, course, sources }) {
+  const sourceSignature = buildCourseSourcesSignature(sources);
+  const current = (db.ragChunks || []).filter(
+    (chunk) =>
+      chunk.course_id === course.id &&
+      chunk.source_signature === sourceSignature &&
+      chunk.embedding_model === RAG_EMBED_MODEL,
+  );
+
+  if (current.length > 0) {
+    return { chunks: current, sourceSignature, indexed: false, indexing: false };
+  }
+
+  const textSources = sources.filter((source) => source.content_text?.trim());
+  if (textSources.length === 0) {
+    return { chunks: [], sourceSignature, indexed: false, indexing: false };
+  }
+
+  queueCourseRagIndex({ course, sources, sourceSignature });
+  return { chunks: [], sourceSignature, indexed: false, indexing: true };
 }
 
 app.use(attachUser);
@@ -123,6 +334,10 @@ app.get("/health", (_req, res) => {
     ok: true,
     service: "backend",
     timestamp: new Date().toISOString(),
+    rag: {
+      embed_model: RAG_EMBED_MODEL,
+      top_k: RAG_TOP_K,
+    },
   });
 });
 
@@ -203,7 +418,7 @@ app.post("/api/entities/:entity", requireAuth, async (req, res) => {
   const input = req.body || {};
 
   if (
-    req.user.role !== "admin" &&
+    !isInstructorRole(req.user.role) &&
     ["Course", "Assignment", "Flashcard"].includes(entity)
   ) {
     return res
@@ -214,7 +429,7 @@ app.post("/api/entities/:entity", requireAuth, async (req, res) => {
   if (
     entity === "CourseEnrollment" &&
     input.student_id !== req.user.id &&
-    req.user.role !== "admin"
+    !isInstructorRole(req.user.role)
   ) {
     return res
       .status(403)
@@ -253,7 +468,7 @@ app.patch("/api/entities/:entity/:id", requireAuth, async (req, res) => {
     if (!canAccessRecord(entity, current, req.user)) return db;
 
     if (
-      req.user.role !== "admin" &&
+      !isInstructorRole(req.user.role) &&
       ["Course", "Assignment", "Flashcard"].includes(entity)
     ) {
       return db;
@@ -282,16 +497,43 @@ app.delete("/api/entities/:entity/:id", requireAuth, async (req, res) => {
   }
 
   let deleted = false;
+  let forbidden = false;
 
   await writeDb((db) => {
     const current = db[collection].find((item) => item.id === id);
-    if (!current || !canAccessRecord(entity, current, req.user)) {
+    if (!current) {
       return db;
     }
+
+    if (entity === "Course") {
+      if (!isInstructorRole(req.user?.role)) {
+        forbidden = true;
+        return db;
+      }
+      if (
+        req.user.role !== "admin" &&
+        current.instructor_id &&
+        current.instructor_id !== req.user.id
+      ) {
+        forbidden = true;
+        return db;
+      }
+    }
+
+    if (!canAccessRecord(entity, current, req.user)) {
+      return db;
+    }
+
     db[collection] = db[collection].filter((item) => item.id !== id);
     deleted = true;
     return db;
   });
+
+  if (forbidden) {
+    return res
+      .status(403)
+      .json({ message: "Only instructor can delete this course" });
+  }
 
   if (!deleted) {
     return res.status(404).json({ message: "Record not found or forbidden" });
@@ -310,7 +552,7 @@ app.post(
     }
 
     const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-    const contentText = await extractText(req.file.path, req.file.mimetype);
+    const extracted = await extractText(req.file.path, req.file.mimetype);
 
     const stored = withAuditFields({
       uploaded_by: req.user.id,
@@ -318,7 +560,8 @@ app.post(
       mimetype: req.file.mimetype,
       file_url: fileUrl,
       file_path: req.file.path,
-      content_text: contentText,
+      content_text: extracted.content_text,
+      content_pages: extracted.content_pages,
     });
 
     await writeDb((db) => {
@@ -326,7 +569,11 @@ app.post(
       return db;
     });
 
-    return res.json({ file_url: fileUrl, content_text: contentText });
+    return res.json({
+      file_url: fileUrl,
+      content_text: extracted.content_text,
+      content_pages: extracted.content_pages,
+    });
   },
 );
 
@@ -357,15 +604,85 @@ app.post("/api/chat/respond", requireAuth, async (req, res) => {
   }
 
   const hintOnly = Boolean(course?.llm_config?.hint_only_mode);
-  const sourceEnriched = (course.content_sources || []).map((source) => {
-    const upload = db.uploads.find((u) => u.file_url === source.url);
-    return {
-      ...source,
-      content_text: source.content_text || upload?.content_text || "",
-    };
+  let sourceEnriched = hydrateCourseSources({
+    course,
+    uploads: db.uploads || [],
   });
 
-  const rag = buildRagContext({ question: message, sources: sourceEnriched });
+  // Backfill legacy uploads that were saved before PDF/DOCX extraction was added.
+  let hasUploadTextBackfill = false;
+  for (const source of sourceEnriched) {
+    const upload = (db.uploads || []).find((item) => item.file_url === source.url);
+    if (!upload) continue;
+    const hasText = Boolean(source.content_text?.trim());
+    const hasPages = Array.isArray(source.content_pages) && source.content_pages.length > 0;
+    const needsTextBackfill = !hasText;
+    const needsPdfPageBackfill = !hasPages && isPdfUpload(upload);
+
+    if (!needsTextBackfill && !needsPdfPageBackfill) {
+      continue;
+    }
+
+    const resolvedPath = await resolveUploadFilePath(upload);
+    if (!resolvedPath) continue;
+
+    const extracted = await extractText(resolvedPath, upload.mimetype);
+    if (!extracted.content_text?.trim()) continue;
+
+    const nextText = extracted.content_text;
+    const nextPages = Array.isArray(extracted.content_pages)
+      ? extracted.content_pages
+      : [];
+    const textChanged = upload.content_text !== nextText;
+    const pagesChanged = JSON.stringify(upload.content_pages || []) !== JSON.stringify(nextPages);
+    if (!textChanged && !pagesChanged) continue;
+
+    upload.content_text = nextText;
+    upload.content_pages = nextPages;
+    upload.file_path = resolvedPath;
+    hasUploadTextBackfill = true;
+  }
+
+  if (hasUploadTextBackfill) {
+    await writeDb((nextDb) => {
+      nextDb.uploads = db.uploads;
+      return nextDb;
+    });
+
+    sourceEnriched = hydrateCourseSources({
+      course,
+      uploads: db.uploads || [],
+    });
+  }
+
+  let rag = { snippets: [], contextText: "" };
+  try {
+    const { chunks } = await ensureCourseRagChunks({
+      db,
+      course,
+      sources: sourceEnriched,
+    });
+    if (chunks.length > 0) {
+      rag = await buildRagContextFromEmbeddings({
+        question: message,
+        chunks,
+        topK: RAG_TOP_K,
+        embedText: embedWithOllama,
+      });
+    } else {
+      rag = buildRagContextLexical({
+        question: message,
+        sources: sourceEnriched,
+        topK: RAG_TOP_K,
+      });
+    }
+  } catch {
+    rag = buildRagContextLexical({
+      question: message,
+      sources: sourceEnriched,
+      topK: RAG_TOP_K,
+    });
+  }
   const policyPrompt = buildPolicyPrompt({
     course,
     llmConfig: course.llm_config,
@@ -385,7 +702,7 @@ app.post("/api/chat/respond", requireAuth, async (req, res) => {
     rag.contextText
       ? `Relevant course context:\n${rag.contextText}`
       : "No matching context found from uploaded sources.",
-    "Answer in a pedagogical way and cite which context snippet numbers you used when relevant.",
+    "Answer in a pedagogical way and cite which context snippet numbers you used when relevant. Include page numbers when available in the context labels.",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -407,6 +724,7 @@ app.post("/api/chat/respond", requireAuth, async (req, res) => {
     citations: rag.snippets.map((snippet, index) => ({
       id: index + 1,
       source: snippet.sourceName,
+      page: Number.isInteger(snippet.pageNumber) ? snippet.pageNumber : null,
       score: Number(snippet.score.toFixed(3)),
     })),
   });

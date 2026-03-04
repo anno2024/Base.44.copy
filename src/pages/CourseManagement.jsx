@@ -14,7 +14,8 @@ import {
   Edit3,
   BarChart3,
   BookOpen,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +71,13 @@ export default function CourseManagement() {
     mutationFn: (data) => base44.entities.Course.update(courseId, data),
     onSuccess: () => queryClient.invalidateQueries(['course', courseId])
   });
+  const deleteCourseMutation = useMutation({
+    mutationFn: () => base44.entities.Course.delete(courseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['courses']);
+      navigate(createPageUrl('Dashboard'));
+    }
+  });
 
   const [llmConfig, setLlmConfig] = useState(null);
 
@@ -81,6 +89,19 @@ export default function CourseManagement() {
 
   const saveLlmConfig = () => {
     updateCourseMutation.mutate({ llm_config: llmConfig });
+  };
+  const deleteCourse = async () => {
+    if (!courseId || deleteCourseMutation.isPending) return;
+    const confirmed = window.confirm(
+      `Delete "${course?.name || 'this course'}"? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    try {
+      await deleteCourseMutation.mutateAsync();
+    } catch (error) {
+      window.alert(error?.message || 'Failed to delete course');
+    }
   };
 
   const totalTimeMinutes = sessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
@@ -116,6 +137,14 @@ export default function CourseManagement() {
                 <p className="text-slate-500">{course.code}</p>
               </div>
             </div>
+            <Button
+              variant="destructive"
+              onClick={deleteCourse}
+              disabled={deleteCourseMutation.isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {deleteCourseMutation.isPending ? 'Deleting...' : 'Delete Course'}
+            </Button>
           </div>
         </div>
 

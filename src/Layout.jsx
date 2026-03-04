@@ -95,7 +95,10 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={() => base44.auth.logout()}
+                    onClick={() => {
+                      base44.auth.logout();
+                      window.location.href = '/';
+                    }}
                     className="text-red-600 cursor-pointer"
                   >
                     <LogOut className="h-4 w-4 mr-2" />

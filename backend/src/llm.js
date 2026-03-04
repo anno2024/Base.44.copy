@@ -51,6 +51,39 @@ export async function invokeOllama({
   }
 }
 
+export async function embedWithOllama(text) {
+  const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+  const model = process.env.OLLAMA_EMBED_MODEL || "bge-m3";
+
+  const payload = {
+    model,
+    prompt: String(text || ""),
+  };
+
+  try {
+    const response = await withTimeout((signal) =>
+      fetch(`${baseUrl}/api/embeddings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal,
+      }),
+    );
+
+    if (!response.ok) {
+      throw new Error(`Ollama embedding error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data?.embedding)) {
+      throw new Error("Missing embedding vector in response");
+    }
+    return data.embedding;
+  } catch (error) {
+    throw new Error(`Local embedding model unavailable (${error.message})`);
+  }
+}
+
 export function fallbackAnswer({ hintOnly = false, question }) {
   if (hintOnly) {
     return `Jeg kan gi deg et hint i stedet for fasit: Finn nøkkelbegrepene i spørsmålet, koble dem til pensum, og forklar hvorfor hvert steg er riktig. Spørsmål: ${question}`;
