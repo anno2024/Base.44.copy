@@ -21,9 +21,9 @@ Any change pushed to the repo will also be reflected in the Base44 Builder.
 | --- | --- | --- | --- |
 | `.env.local` | repo root | Vite dev server (`npm run dev`) | <pre>VITE_BASE44_APP_ID=your_app_id<br>VITE_BASE44_APP_BASE_URL=https://yourapp.base44.app<br>VITE_BASE44_FUNCTIONS_VERSION=1<br>VITE_BACKEND_URL=http://localhost:4000</pre> |
 | `.env` | `backend/.env` | Local backend (`npm run backend:dev` or Docker backend service) | <pre>PORT=4000<br>CORS_ORIGIN=http://localhost:5173<br>LLM_TIMEOUT_MS=45000<br>OLLAMA_BASE_URL=http://ollama:11434<br>OLLAMA_MODEL=llama3.1:8b<br>OLLAMA_EMBED_MODEL=bge-m3<br>RAG_TOP_K=4<br>RAG_USE_HISTORY=true<br>RAG_HISTORY_TURNS=8<br>RAG_RETRIEVAL_MODE=hybrid</pre> |
-| `.env.docker` | repo root | `docker compose` build args for the frontend image | <pre>VITE_BASE44_APP_ID=local-app<br>VITE_BASE44_APP_BASE_URL=http://localhost:5173<br>VITE_BASE44_FUNCTIONS_VERSION=1<br>VITE_BACKEND_URL=http://localhost:4000</pre> |
+| `.env.docker` | repo root | `docker compose` build args for the frontend image | <pre>VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6<br>VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app<br>VITE_BASE44_FUNCTIONS_VERSION=1<br>VITE_BACKEND_URL=http://localhost:4000</pre> |
 
-> Tip: templates live in `backend/.env.example` and `.env.docker.example`. Copy them and adjust values as needed.
+> Tip: templates live in `backend/.env.example` and `.env.docker.example`. Copy them and adjust values (IDs/URLs) to match your Base44 app before running anything.
 
 ## Local backend (compatible with this project)
 
