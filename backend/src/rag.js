@@ -14,6 +14,130 @@ function tokenize(text) {
     .filter((token) => token.length > 2);
 }
 
+const STOP_WORDS = new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "that",
+  "this",
+  "from",
+  "what",
+  "when",
+  "where",
+  "which",
+  "why",
+  "how",
+  "can",
+  "you",
+  "your",
+  "are",
+  "was",
+  "were",
+  "have",
+  "has",
+  "had",
+  "will",
+  "shall",
+  "would",
+  "could",
+  "into",
+  "about",
+  "over",
+  "under",
+  "than",
+  "then",
+  "also",
+  "just",
+  "more",
+  "most",
+  "very",
+  "some",
+  "many",
+  "their",
+  "them",
+  "they",
+  "our",
+  "its",
+]);
+
+const NON_DISTINCTIVE_TOKENS = new Set([
+  "agent",
+  "agents",
+  "intelligent",
+  "chapter",
+  "section",
+  "figure",
+  "table",
+]);
+
+function buildQueryProfile(text) {
+  const normalizedQuestion = normalize(text);
+  const orderedTokens = normalizedQuestion
+    .split(" ")
+    .filter((token) => token.length > 2);
+  const tokens = Array.from(new Set(orderedTokens));
+  const counts = orderedTokens.reduce((acc, token) => {
+    acc[token] = (acc[token] || 0) + 1;
+    return acc;
+  }, {});
+  const keyTokens = tokens.filter((token) =>
+    token.length >= 4 &&
+    !STOP_WORDS.has(token) &&
+    !NON_DISTINCTIVE_TOKENS.has(token),
+  );
+  const requiredTokens = Object.entries(counts)
+    .filter(
+      ([token, count]) =>
+        count >= 2 &&
+        token.length >= 4 &&
+        !STOP_WORDS.has(token) &&
+        !NON_DISTINCTIVE_TOKENS.has(token),
+    )
+    .map(([token]) => token);
+  const phraseTokens = orderedTokens.filter(
+    (token) => !STOP_WORDS.has(token),
+  );
+  const phrases = [];
+  for (let i = 0; i < phraseTokens.length - 1; i += 1) {
+    const bigram = `${phraseTokens[i]} ${phraseTokens[i + 1]}`.trim();
+    if (bigram.length >= 7) phrases.push(bigram);
+
+    if (i < phraseTokens.length - 2) {
+      const trigram = `${phraseTokens[i]} ${phraseTokens[i + 1]} ${phraseTokens[i + 2]}`.trim();
+      if (trigram.length >= 11) phrases.push(trigram);
+    }
+  }
+  const uniquePhrases = Array.from(new Set(phrases));
+
+  return {
+    tokens,
+    keyTokens: keyTokens.length > 0 ? keyTokens : tokens,
+    requiredTokens,
+    phrases: uniquePhrases,
+  };
+}
+
+function isLikelyIndexLikeChunk(text) {
+  const value = String(text || "");
+  const compact = value.replace(/\s+/g, " ").trim();
+  if (!compact) return true;
+  if (/(\.\s*){6,}/.test(compact)) return true;
+
+  if (/\b\d{2,4}(,\s*\d{2,4}){3,}\b/.test(compact)) {
+    return true;
+  }
+
+  const commaCount = (compact.match(/,/g) || []).length;
+  const digitGroups = (compact.match(/\d+/g) || []).length;
+  const wordCount = tokenize(compact).length;
+  if (wordCount > 20 && digitGroups > 8 && commaCount > 6) {
+    return true;
+  }
+
+  return false;
+}
+
 function hashText(text) {
   return createHash("sha256").update(String(text || "")).digest("hex");
 }
@@ -197,26 +321,49 @@ export async function buildCourseEmbeddingChunks({
   return chunks;
 }
 
-function scoreChunkLexical(chunk, queryTokens) {
+function scoreChunkLexical(chunk, queryProfile) {
+  if (isLikelyIndexLikeChunk(chunk)) return 0;
+
+  const normalizedChunk = normalize(chunk);
   const chunkTokens = new Set(tokenize(chunk));
-  if (!chunkTokens.size || !queryTokens.length) return 0;
+  if (!chunkTokens.size || !queryProfile?.tokens?.length) return 0;
 
   let overlap = 0;
-  for (const token of queryTokens) {
+  for (const token of queryProfile.tokens) {
     if (chunkTokens.has(token)) overlap += 1;
   }
 
-  return overlap / Math.sqrt(chunkTokens.size);
+  let keyOverlap = 0;
+  for (const token of queryProfile.keyTokens) {
+    if (chunkTokens.has(token)) keyOverlap += 1;
+  }
+  const missingRequired = (queryProfile.requiredTokens || []).some(
+    (token) => !chunkTokens.has(token),
+  );
+  if (missingRequired) return 0;
+
+  // Require at least one key query token match to avoid generic page hits.
+  const minKeyMatches = queryProfile.keyTokens.length >= 3 ? 2 : 1;
+  if (keyOverlap < minKeyMatches) return 0;
+
+  const phraseHits = (queryProfile.phrases || []).reduce(
+    (acc, phrase) => (normalizedChunk.includes(phrase) ? acc + 1 : acc),
+    0,
+  );
+  if (phraseHits <= 0 && keyOverlap < 3) return 0;
+
+  return (keyOverlap * 2 + overlap * 0.5 + phraseHits * 2.5) /
+    Math.sqrt(chunkTokens.size);
 }
 
 export function buildRagContextLexical({ question, sources, topK = 4 }) {
-  const queryTokens = tokenize(question);
+  const queryProfile = buildQueryProfile(question);
   const candidates = [];
 
   for (const source of sources) {
     const chunks = chunkSourceWithMetadata(source);
     for (const chunk of chunks) {
-      const score = scoreChunkLexical(chunk.text, queryTokens);
+      const score = scoreChunkLexical(chunk.text, queryProfile);
       if (score <= 0) continue;
 
       candidates.push({

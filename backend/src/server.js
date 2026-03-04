@@ -247,6 +247,36 @@ function isPdfUpload(upload) {
   );
 }
 
+function formatAnswerWithCitationPages(answer, citations) {
+  const sourceList = Array.isArray(citations) ? citations : [];
+  if (!sourceList.length) return answer;
+
+  return String(answer || "").replace(/\[Kilde\s+(\d+)\]/gi, (full, rawId) => {
+    const id = Number(rawId);
+    if (!Number.isFinite(id)) return full;
+    const citation = sourceList.find((item) => item.id === id);
+    if (!citation) return `[Kilde ${id}]`;
+    if (Number.isInteger(citation.page)) {
+      return `[Kilde ${id}, page ${citation.page}]`;
+    }
+    return `[Kilde ${id}]`;
+  });
+}
+
+function extractReferencedCitationIds(text) {
+  const ids = new Set();
+  const pattern = /\[Kilde\s+(\d+)/gi;
+  let match = pattern.exec(String(text || ""));
+  while (match) {
+    const value = Number(match[1]);
+    if (Number.isFinite(value)) {
+      ids.add(value);
+    }
+    match = pattern.exec(String(text || ""));
+  }
+  return ids;
+}
+
 const RAG_TOP_K = Number(process.env.RAG_TOP_K || 4);
 const RAG_MAX_CHUNK_CHARS = Number(process.env.RAG_MAX_CHUNK_CHARS || 900);
 const RAG_CHUNK_OVERLAP = Number(process.env.RAG_CHUNK_OVERLAP || 140);
@@ -718,15 +748,22 @@ app.post("/api/chat/respond", requireAuth, async (req, res) => {
   }
 
   answer = enforcePolicyOutput({ text: answer, hintOnly });
+  const allCitations = rag.snippets.map((snippet, index) => ({
+    id: index + 1,
+    source: snippet.sourceName,
+    page: Number.isInteger(snippet.pageNumber) ? snippet.pageNumber : null,
+    score: Number(snippet.score.toFixed(3)),
+  }));
+  answer = formatAnswerWithCitationPages(answer, allCitations);
+  const referencedIds = extractReferencedCitationIds(answer);
+  const citations =
+    referencedIds.size > 0
+      ? allCitations.filter((citation) => referencedIds.has(citation.id))
+      : allCitations;
 
   return res.json({
     answer,
-    citations: rag.snippets.map((snippet, index) => ({
-      id: index + 1,
-      source: snippet.sourceName,
-      page: Number.isInteger(snippet.pageNumber) ? snippet.pageNumber : null,
-      score: Number(snippet.score.toFixed(3)),
-    })),
+    citations,
   });
 });
 
