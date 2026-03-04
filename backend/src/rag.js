@@ -122,7 +122,8 @@ export async function buildRagContext({
   }
 
   const shouldUseEmbeddings =
-    ["embedding", "hybrid"].includes(retrievalMode) && typeof embedMany === "function";
+    ["embedding", "hybrid"].includes(retrievalMode) &&
+    typeof embedMany === "function";
 
   let queryEmbedding = null;
   let chunkEmbeddings = [];

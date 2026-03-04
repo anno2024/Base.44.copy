@@ -127,7 +127,9 @@ async function extractText(filePath, mimetype) {
 
 function buildInstructorContextSource(course) {
   const llmConfigText = Object.entries(course?.llm_config || {})
-    .filter(([, value]) => value !== null && value !== undefined && `${value}`.trim())
+    .filter(
+      ([, value]) => value !== null && value !== undefined && `${value}`.trim(),
+    )
     .map(([key, value]) => `${key}: ${value}`)
     .join("\n");
 
@@ -168,7 +170,9 @@ function buildRagQuery({ message, conversation, useHistory, historyTurns }) {
     .filter(Boolean)
     .join("\n");
 
-  return [historyText, `Student question: ${message}`].filter(Boolean).join("\n");
+  return [historyText, `Student question: ${message}`]
+    .filter(Boolean)
+    .join("\n");
 }
 
 app.use(attachUser);
