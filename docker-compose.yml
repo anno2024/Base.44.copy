@@ -57,14 +57,29 @@ services:
 
   ollama-init:
     image: ollama/ollama:latest
+    env_file:
+      - backend/.env
     depends_on:
       ollama:
         condition: service_started
     environment:
       - OLLAMA_HOST=ollama:11434
-      - OLLAMA_MODEL=llama3.1:8b
     entrypoint:
-      ["/bin/sh", "-c", "until OLLAMA_HOST=$${OLLAMA_HOST} ollama list >/dev/null 2>&1; do echo 'Waiting for Ollama...'; sleep 2; done; OLLAMA_HOST=$${OLLAMA_HOST} ollama pull $${OLLAMA_MODEL};"]
+      [
+        "/bin/sh",
+        "-c",
+        "set -e; \
+until OLLAMA_HOST=$${OLLAMA_HOST} ollama list >/dev/null 2>&1; do \
+  echo 'Waiting for Ollama...'; \
+  sleep 2; \
+done; \
+for MODEL in $${OLLAMA_MODEL} $${OLLAMA_EMBED_MODEL}; do \
+  if [ -n \"$${MODEL}\" ]; then \
+    echo \"Pulling $${MODEL}\"; \
+    OLLAMA_HOST=$${OLLAMA_HOST} ollama pull $${MODEL}; \
+  fi; \
+done;"
+      ]
     restart: "no"
 
 volumes:

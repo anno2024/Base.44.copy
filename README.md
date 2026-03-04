@@ -20,7 +20,7 @@ Any change pushed to the repo will also be reflected in the Base44 Builder.
 | File | Location | Purpose | Required keys |
 | --- | --- | --- | --- |
 | `.env.local` | repo root | Vite dev server (`npm run dev`) | <pre>VITE_BASE44_APP_ID=your_app_id<br>VITE_BASE44_APP_BASE_URL=https://yourapp.base44.app<br>VITE_BASE44_FUNCTIONS_VERSION=1<br>VITE_BACKEND_URL=http://localhost:4000</pre> |
-| `.env` | `backend/.env` | Local backend (`npm run backend:dev` or Docker backend service) | <pre>PORT=4000<br>CORS_ORIGIN=http://localhost:5173<br>LLM_TIMEOUT_MS=45000<br>OLLAMA_BASE_URL=http://ollama:11434<br>OLLAMA_MODEL=llama3.1:8b</pre> |
+| `.env` | `backend/.env` | Local backend (`npm run backend:dev` or Docker backend service) | <pre>PORT=4000<br>CORS_ORIGIN=http://localhost:5173<br>LLM_TIMEOUT_MS=45000<br>OLLAMA_BASE_URL=http://ollama:11434<br>OLLAMA_MODEL=llama3.1:8b<br>OLLAMA_EMBED_MODEL=bge-m3<br>RAG_TOP_K=4<br>RAG_USE_HISTORY=true<br>RAG_HISTORY_TURNS=8<br>RAG_RETRIEVAL_MODE=hybrid</pre> |
 | `.env.docker` | repo root | `docker compose` build args for the frontend image | <pre>VITE_BASE44_APP_ID=local-app<br>VITE_BASE44_APP_BASE_URL=http://localhost:5173<br>VITE_BASE44_FUNCTIONS_VERSION=1<br>VITE_BACKEND_URL=http://localhost:4000</pre> |
 
 > Tip: templates live in `backend/.env.example` and `.env.docker.example`. Copy them and adjust values as needed.
@@ -145,7 +145,7 @@ This brings up three long-running services plus a one-shot helper:
 - `frontend` (Vite build served by nginx) on http://localhost:5173
 - `backend` (Express API) on http://localhost:4000 with volumes `backend/data` + `backend/uploads`
 - `ollama` exposing http://localhost:11434 and persisting models in the named `ollama-data` volume
-- `ollama-init` waits for the Ollama API and runs `ollama pull llama3.1:8b` so the backend can use the model immediately
+- `ollama-init` waits for the Ollama API and pulls both `OLLAMA_MODEL` (default `llama3.1:8b`) and `OLLAMA_EMBED_MODEL` (default `bge-m3`) so chat + retrieval models are ready before the backend starts
 
 Useful commands:
 
@@ -154,8 +154,9 @@ Useful commands:
 docker compose logs -f backend
 docker compose logs -f ollama
 
-# manually pull/refresh a model if you change backend/.env
+# manually pull/refresh models if you change backend/.env
 docker compose exec ollama ollama pull llama3.1:8b
+docker compose exec ollama ollama pull bge-m3
 
 # stop and clean up containers
 docker compose down
@@ -189,8 +190,8 @@ curl -i http://localhost:4000/health
 
 Notes:
 
-- `docker compose` here runs the backend service from `backend/docker-compose.yml`
-- Frontend is still run with Vite locally (`npm run dev`) unless you add a separate frontend container
+- The root `docker compose.yml` runs frontend, backend, Ollama, and the init helper together; no extra commands are needed for the frontend once the stack is up.
+- If you skip the frontend container (e.g., local `npm run dev`), keep `backend/.env` and `OLLAMA_*` values in sync so retrieval works consistently.
 
 **Publish your changes**
 
