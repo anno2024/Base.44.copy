@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import multer from "multer";
+import { PDFParse } from "pdf-parse";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -17,7 +18,7 @@ import {
 } from "./db.js";
 import { buildPolicyPrompt, enforcePolicyOutput } from "./policy.js";
 import { buildRagContext } from "./rag.js";
-import { invokeOllama, fallbackAnswer } from "./llm.js";
+import { invokeOllama, invokeOllamaEmbeddings, fallbackAnswer } from "./llm.js";
 import { parseFeedbackJson, fallbackFeedback } from "./feedback.js";
 
 const app = express();
@@ -107,6 +108,14 @@ function scopeEntityRead(entity, items, user) {
 
 async function extractText(filePath, mimetype) {
   try {
+    if (mimetype.includes("pdf")) {
+      const fileBuffer = await fs.readFile(filePath);
+      const parser = new PDFParse({ data: fileBuffer });
+      const result = await parser.getText();
+      await parser.destroy();
+      return (result?.text || "").trim();
+    }
+
     if (mimetype.includes("text") || mimetype.includes("json")) {
       return await fs.readFile(filePath, "utf-8");
     }
@@ -114,6 +123,52 @@ async function extractText(filePath, mimetype) {
   } catch {
     return "";
   }
+}
+
+function buildInstructorContextSource(course) {
+  const llmConfigText = Object.entries(course?.llm_config || {})
+    .filter(([, value]) => value !== null && value !== undefined && `${value}`.trim())
+    .map(([key, value]) => `${key}: ${value}`)
+    .join("\n");
+
+  const contentText = [
+    course?.name ? `Course name: ${course.name}` : "",
+    course?.code ? `Course code: ${course.code}` : "",
+    course?.description ? `Course description: ${course.description}` : "",
+    llmConfigText ? `Instructor settings:\n${llmConfigText}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  if (!contentText) return null;
+
+  return {
+    name: "Instructor-defined course setup",
+    type: "instructor",
+    url: "instructor://course-config",
+    content_text: contentText,
+  };
+}
+
+function buildRagQuery({ message, conversation, useHistory, historyTurns }) {
+  if (!useHistory || !Array.isArray(conversation) || !conversation.length) {
+    return message;
+  }
+
+  const safeTurns = Number.isFinite(historyTurns)
+    ? Math.max(0, Math.floor(historyTurns))
+    : 0;
+  const historyText = conversation
+    .slice(-safeTurns)
+    .map((entry) => {
+      const role = entry?.role === "assistant" ? "Assistant" : "Student";
+      const content = String(entry?.content || "").trim();
+      return content ? `${role}: ${content}` : "";
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  return [historyText, `Student question: ${message}`].filter(Boolean).join("\n");
 }
 
 app.use(attachUser);
@@ -357,6 +412,14 @@ app.post("/api/chat/respond", requireAuth, async (req, res) => {
   }
 
   const hintOnly = Boolean(course?.llm_config?.hint_only_mode);
+  const ragTopK = Number(process.env.RAG_TOP_K || 4);
+  const ragUseHistory = process.env.RAG_USE_HISTORY !== "false";
+  const ragHistoryTurns = Number(process.env.RAG_HISTORY_TURNS || 8);
+  const ragRetrievalMode = String(
+    process.env.RAG_RETRIEVAL_MODE || "hybrid",
+  ).toLowerCase();
+  const embedModel = process.env.OLLAMA_EMBED_MODEL || "bge-m3";
+
   const sourceEnriched = (course.content_sources || []).map((source) => {
     const upload = db.uploads.find((u) => u.file_url === source.url);
     return {
@@ -364,24 +427,37 @@ app.post("/api/chat/respond", requireAuth, async (req, res) => {
       content_text: source.content_text || upload?.content_text || "",
     };
   });
+  const instructorSource = buildInstructorContextSource(course);
+  const ragSources = instructorSource
+    ? [...sourceEnriched, instructorSource]
+    : sourceEnriched;
 
-  const rag = buildRagContext({ question: message, sources: sourceEnriched });
+  const ragQuery = buildRagQuery({
+    message,
+    conversation,
+    useHistory: ragUseHistory,
+    historyTurns: ragHistoryTurns,
+  });
+
+  const rag = await buildRagContext({
+    question: ragQuery,
+    sources: ragSources,
+    topK: ragTopK,
+    retrievalMode: ragRetrievalMode,
+    embedModel,
+    embedMany: (texts) =>
+      invokeOllamaEmbeddings({
+        inputs: texts,
+        model: embedModel,
+      }),
+  });
   const policyPrompt = buildPolicyPrompt({
     course,
     llmConfig: course.llm_config,
     mode: hintOnly ? "hint-only" : "normal",
   });
-  const history = conversation
-    .slice(-12)
-    .map(
-      (msg) =>
-        `${msg.role === "assistant" ? "Assistant" : "Student"}: ${msg.content}`,
-    )
-    .join("\n");
-
   const userPrompt = [
     `Student question: ${message}`,
-    history ? `Conversation history:\n${history}` : "",
     rag.contextText
       ? `Relevant course context:\n${rag.contextText}`
       : "No matching context found from uploaded sources.",

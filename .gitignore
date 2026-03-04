@@ -28,3 +28,8 @@ dist-ssr
 *.sw?
 
 .env
+
+# Backend runtime data
+backend/data/
+backend/uploads/
+backend/.env

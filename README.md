@@ -51,6 +51,20 @@ cp backend/.env.example backend/.env
 
 Optional: change model in `backend/.env` (default is `llama3.1:8b`).
 
+RAG-related options in `backend/.env`:
+
+```env
+RAG_TOP_K=4
+RAG_USE_HISTORY=true
+RAG_HISTORY_TURNS=8
+RAG_RETRIEVAL_MODE=hybrid
+OLLAMA_EMBED_MODEL=bge-m3
+```
+
+- `RAG_USE_HISTORY=true` means retrieval uses recent conversation turns as search signal.
+- Retrieved context is combined from uploaded sources (including parsed PDFs when text can be extracted) and instructor-defined course context.
+- `RAG_RETRIEVAL_MODE` supports `lexical`, `embedding`, or `hybrid` (recommended).
+
 ### 3) Run backend
 
 ```bash
@@ -62,6 +76,49 @@ npm run backend:dev
 ```bash
 npm run dev
 ```
+
+### 5) Verify locally (dev smoke test)
+
+Backend health:
+
+```bash
+curl -i http://localhost:4000/health
+```
+
+Frontend:
+
+- Open `http://localhost:5173`
+- Choose role in login screen: `Instructor` or `Student`
+
+Optional checks:
+
+```bash
+npm run lint
+npm run build
+```
+
+### 6) Local LLM (Ollama)
+
+If you want real local model responses (instead of fallback text):
+
+```bash
+ollama serve
+ollama pull llama3.2:3b
+ollama pull bge-m3
+```
+
+Then set model in `backend/.env`:
+
+```env
+OLLAMA_MODEL=llama3.2:3b
+OLLAMA_EMBED_MODEL=bge-m3
+```
+
+Note:
+
+- This app needs a **generative** model for final answers (e.g. `llama3.2:3b` or similar).
+- For embedding retrieval, run an embedding model (recommended: `bge-m3`).
+- Instructor configuration/policy is still enforced server-side before/after generation.
 
 ## Demo users
 
@@ -104,7 +161,36 @@ docker compose exec ollama ollama pull llama3.1:8b
 docker compose down
 ```
 
-The previous backend-only compose file under `backend/` still works if you only need the API.
+If backend runs in Docker and Ollama runs on your host machine, set this in `backend/.env` before `docker compose up`:
+
+```env
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+OLLAMA_MODEL=llama3.2:3b
+RAG_TOP_K=4
+RAG_USE_HISTORY=true
+RAG_HISTORY_TURNS=8
+RAG_RETRIEVAL_MODE=hybrid
+OLLAMA_EMBED_MODEL=bge-m3
+```
+
+And make sure Ollama is running on host:
+
+```bash
+ollama serve
+ollama pull llama3.2:3b
+ollama pull bge-m3
+```
+
+Verify Docker backend is running:
+
+```bash
+curl -i http://localhost:4000/health
+```
+
+Notes:
+
+- `docker compose` here runs the backend service from `backend/docker-compose.yml`
+- Frontend is still run with Vite locally (`npm run dev`) unless you add a separate frontend container
 
 **Publish your changes**
 

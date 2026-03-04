@@ -120,6 +120,17 @@
       ],
       "status": "active",
       "duration_minutes": 1
+    },
+    {
+      "id": "5824c8b5-9677-4298-bd2e-bc894f9f420c",
+      "created_date": "2026-03-04T12:18:02.784Z",
+      "updated_date": "2026-03-04T12:18:02.784Z",
+      "course_id": "98ba0e1a-65f8-4896-bd22-2b61a8512404",
+      "student_id": "u-student",
+      "student_email": "student@example.com",
+      "title": "New Conversation",
+      "messages": [],
+      "status": "active"
     }
   ],
   "assignments": [
@@ -313,6 +324,69 @@
       "updated_date": "2026-02-25T13:13:48.640Z",
       "user_id": "u-instructor",
       "pageName": "Dashboard"
+    },
+    {
+      "id": "43a629e8-f222-4484-a114-f1daaa29c55c",
+      "created_date": "2026-02-25T13:26:14.621Z",
+      "updated_date": "2026-02-25T13:26:14.621Z",
+      "user_id": "u-instructor",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "7f598c05-4ad8-45a3-8d36-67d5275d023c",
+      "created_date": "2026-02-25T13:26:16.221Z",
+      "updated_date": "2026-02-25T13:26:16.221Z",
+      "user_id": "u-instructor",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "4a1c7bc6-3a32-4cb4-a0db-e9019651ff32",
+      "created_date": "2026-02-25T13:26:20.498Z",
+      "updated_date": "2026-02-25T13:26:20.498Z",
+      "user_id": "u-instructor",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "3d514ac3-6ea2-40c2-9e80-d3c9416f7dc9",
+      "created_date": "2026-02-25T13:26:29.001Z",
+      "updated_date": "2026-02-25T13:26:29.001Z",
+      "user_id": "u-instructor",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "0b7b72e1-abab-450c-a67e-ceb409b50064",
+      "created_date": "2026-02-25T13:26:49.051Z",
+      "updated_date": "2026-02-25T13:26:49.051Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "42cacb9e-fd60-4c96-ad78-d403573cf52c",
+      "created_date": "2026-02-25T15:33:42.522Z",
+      "updated_date": "2026-02-25T15:33:42.522Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "66bfc60d-a012-431d-9f75-1219b07e59ab",
+      "created_date": "2026-03-04T12:17:28.771Z",
+      "updated_date": "2026-03-04T12:17:28.771Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "07ca9e1d-355c-4b46-854e-a69e7fdb70ba",
+      "created_date": "2026-03-04T12:17:38.394Z",
+      "updated_date": "2026-03-04T12:17:38.394Z",
+      "user_id": "u-student",
+      "pageName": "Dashboard"
+    },
+    {
+      "id": "a144f8f7-96fc-4f06-86b0-608397c26efa",
+      "created_date": "2026-03-04T12:17:59.477Z",
+      "updated_date": "2026-03-04T12:17:59.477Z",
+      "user_id": "u-student",
+      "pageName": "StudentCourse"
     }
   ]
 }
