@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { 
   LayoutDashboard, 
   Search,
@@ -19,11 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Layout({ children, currentPageName }) {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-  }, []);
+  const { user, logout } = useAuth();
 
   const isInstructor = user?.role === 'admin';
 
@@ -95,7 +91,7 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={() => base44.auth.logout()}
+                    onClick={() => logout()}
                     className="text-red-600 cursor-pointer"
                   >
                     <LogOut className="h-4 w-4 mr-2" />
