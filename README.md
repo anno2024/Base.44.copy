@@ -54,16 +54,18 @@ Optional: change model in `backend/.env` (default is `llama3.1:8b`).
 RAG-related options in `backend/.env`:
 
 ```env
-RAG_TOP_K=4
+RAG_TOP_K=3
 RAG_USE_HISTORY=true
-RAG_HISTORY_TURNS=8
+RAG_HISTORY_TURNS=4
 RAG_RETRIEVAL_MODE=hybrid
 OLLAMA_EMBED_MODEL=bge-m3
+RAG_EMBED_CANDIDATE_K=24
 ```
 
 - `RAG_USE_HISTORY=true` means retrieval uses recent conversation turns as search signal.
 - Retrieved context is combined from uploaded sources (including parsed PDFs when text can be extracted) and instructor-defined course context.
 - `RAG_RETRIEVAL_MODE` supports `lexical`, `embedding`, or `hybrid` (recommended).
+- `RAG_EMBED_CANDIDATE_K` limits how many chunks are embedded per request (lower = lighter CPU/RAM).
 
 ### 3) Run backend
 
@@ -167,11 +169,12 @@ If backend runs in Docker and Ollama runs on your host machine, set this in `bac
 ```env
 OLLAMA_BASE_URL=http://host.docker.internal:11434
 OLLAMA_MODEL=llama3.2:3b
-RAG_TOP_K=4
+RAG_TOP_K=3
 RAG_USE_HISTORY=true
-RAG_HISTORY_TURNS=8
+RAG_HISTORY_TURNS=4
 RAG_RETRIEVAL_MODE=hybrid
 OLLAMA_EMBED_MODEL=bge-m3
+RAG_EMBED_CANDIDATE_K=24
 ```
 
 And make sure Ollama is running on host:

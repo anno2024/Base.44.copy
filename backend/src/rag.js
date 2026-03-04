@@ -106,6 +106,7 @@ export async function buildRagContext({
   retrievalMode = "hybrid",
   embedMany = null,
   embedModel = process.env.OLLAMA_EMBED_MODEL || "bge-m3",
+  embedCandidateK = Number(process.env.RAG_EMBED_CANDIDATE_K || 24),
 }) {
   const queryTokens = tokenize(question);
   const chunks = [];
@@ -125,30 +126,52 @@ export async function buildRagContext({
     ["embedding", "hybrid"].includes(retrievalMode) &&
     typeof embedMany === "function";
 
-  let queryEmbedding = null;
-  let chunkEmbeddings = [];
+  const indexedChunks = chunks.map((chunk, index) => ({
+    ...chunk,
+    index,
+  }));
+  const embeddingScoreByIndex = new Map();
 
-  if (shouldUseEmbeddings && chunks.length) {
+  if (shouldUseEmbeddings && indexedChunks.length) {
     try {
-      const texts = [question, ...chunks.map((item) => item.text)];
+      const safeCandidateK = Number.isFinite(embedCandidateK)
+        ? Math.max(1, Math.floor(embedCandidateK))
+        : 24;
+      const ranked = [...indexedChunks].sort(
+        (a, b) => b.lexicalScore - a.lexicalScore,
+      );
+      const positive = ranked.filter((item) => item.lexicalScore > 0);
+      const embeddingCandidates = (positive.length ? positive : ranked).slice(
+        0,
+        safeCandidateK,
+      );
+
+      const texts = [question, ...embeddingCandidates.map((item) => item.text)];
       const embeddings = await getEmbeddings({
         texts,
         embedMany,
         embedModel,
       });
-      queryEmbedding = embeddings[0] || null;
-      chunkEmbeddings = embeddings.slice(1);
+      const queryEmbedding = embeddings[0] || null;
+      const chunkEmbeddings = embeddings.slice(1);
+
+      if (queryEmbedding) {
+        embeddingCandidates.forEach((candidate, localIndex) => {
+          const embedding = chunkEmbeddings[localIndex];
+          if (!embedding) return;
+          const score = cosineSimilarity(queryEmbedding, embedding);
+          if (score > 0) {
+            embeddingScoreByIndex.set(candidate.index, score);
+          }
+        });
+      }
     } catch {
-      queryEmbedding = null;
-      chunkEmbeddings = [];
+      embeddingScoreByIndex.clear();
     }
   }
 
-  const candidates = chunks.map((chunk, index) => {
-    const embeddingScore =
-      queryEmbedding && chunkEmbeddings[index]
-        ? cosineSimilarity(queryEmbedding, chunkEmbeddings[index])
-        : 0;
+  const candidates = indexedChunks.map((chunk) => {
+    const embeddingScore = embeddingScoreByIndex.get(chunk.index) || 0;
 
     let score = chunk.lexicalScore;
     if (retrievalMode === "embedding") {
