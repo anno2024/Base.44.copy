@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
@@ -99,6 +99,8 @@ export default function CourseManagement() {
   const [contentSources, setContentSources] = useState([]);
   const [isUploadingRagPdf, setIsUploadingRagPdf] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const assignmentUploadInputRef = useRef(null);
+  const ragUploadInputRef = useRef(null);
 
   useEffect(() => {
     if (!course) return;
@@ -456,23 +458,22 @@ export default function CourseManagement() {
               </div>
               <div>
                 <input
-                  id="assignment-pdf-upload"
+                  ref={assignmentUploadInputRef}
                   type="file"
                   accept="application/pdf,.pdf"
                   onChange={handleAssignmentPdfUpload}
                   className="hidden"
                   disabled={isUploadingAssignment}
                 />
-                <label htmlFor="assignment-pdf-upload">
-                  <Button
-                    type="button"
-                    className="bg-slate-900 hover:bg-slate-800 rounded-xl"
-                    disabled={isUploadingAssignment}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isUploadingAssignment ? "Uploading..." : "Upload PDF"}
-                  </Button>
-                </label>
+                <Button
+                  type="button"
+                  className="bg-slate-900 hover:bg-slate-800 rounded-xl"
+                  disabled={isUploadingAssignment}
+                  onClick={() => assignmentUploadInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {isUploadingAssignment ? "Uploading..." : "Upload PDF"}
+                </Button>
               </div>
             </div>
             {assignments.length === 0 ? (
@@ -702,7 +703,7 @@ export default function CourseManagement() {
                       </div>
                       <div>
                         <input
-                          id="rag-pdf-upload"
+                          ref={ragUploadInputRef}
                           type="file"
                           multiple
                           accept="application/pdf,.pdf"
@@ -710,16 +711,15 @@ export default function CourseManagement() {
                           className="hidden"
                           disabled={isUploadingRagPdf}
                         />
-                        <label htmlFor="rag-pdf-upload">
-                          <Button
-                            type="button"
-                            className="bg-slate-900 hover:bg-slate-800 rounded-xl"
-                            disabled={isUploadingRagPdf}
-                          >
-                            <Upload className="h-4 w-4 mr-2" />
-                            {isUploadingRagPdf ? "Uploading..." : "Upload PDF"}
-                          </Button>
-                        </label>
+                        <Button
+                          type="button"
+                          className="bg-slate-900 hover:bg-slate-800 rounded-xl"
+                          disabled={isUploadingRagPdf}
+                          onClick={() => ragUploadInputRef.current?.click()}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {isUploadingRagPdf ? "Uploading..." : "Upload PDF"}
+                        </Button>
                       </div>
                     </div>
 
