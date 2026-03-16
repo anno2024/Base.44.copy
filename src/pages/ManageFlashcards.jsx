@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
-import { 
-  ArrowLeft, 
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import {
+  ArrowLeft,
   Sparkles,
   Check,
   Share2,
   Trash2,
-  Loader2
-} from 'lucide-react';
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,49 +20,50 @@ import { Label } from "@/components/ui/label";
 export default function ManageFlashcards() {
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
-  const courseId = urlParams.get('courseId');
+  const courseId = urlParams.get("courseId");
 
   const [isGenerating, setIsGenerating] = useState(false);
-  const [topic, setTopic] = useState('');
+  const [topic, setTopic] = useState("");
   const [editingCard, setEditingCard] = useState(null);
 
   const { data: course } = useQuery({
-    queryKey: ['course', courseId],
+    queryKey: ["course", courseId],
     queryFn: async () => {
       const courses = await base44.entities.Course.filter({ id: courseId });
       return courses[0];
     },
-    enabled: !!courseId
+    enabled: !!courseId,
   });
 
   const { data: flashcards = [], isLoading } = useQuery({
-    queryKey: ['flashcards', courseId],
+    queryKey: ["flashcards", courseId],
     queryFn: () => base44.entities.Flashcard.filter({ course_id: courseId }),
-    enabled: !!courseId
+    enabled: !!courseId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Flashcard.create({...data, course_id: courseId}),
-    onSuccess: () => queryClient.invalidateQueries(['flashcards'])
+    mutationFn: (data) =>
+      base44.entities.Flashcard.create({ ...data, course_id: courseId }),
+    onSuccess: () => queryClient.invalidateQueries(["flashcards"]),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Flashcard.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries(['flashcards'])
+    onSuccess: () => queryClient.invalidateQueries(["flashcards"]),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Flashcard.delete(id),
-    onSuccess: () => queryClient.invalidateQueries(['flashcards'])
+    onSuccess: () => queryClient.invalidateQueries(["flashcards"]),
   });
 
   const generateFlashcards = async () => {
     setIsGenerating(true);
 
     const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `Generate 5 educational flashcards for the course "${course?.name}" (${course?.code}).
-${topic ? `Focus on the topic: ${topic}` : ''}
-${course?.description ? `Course description: ${course.description}` : ''}
+      prompt: `Generate 5 educational flashcards for the course "${course?.name}".
+${topic ? `Focus on the topic: ${topic}` : ""}
+${course?.description ? `Course description: ${course.description}` : ""}
 
 Generate flashcards that test understanding, not just memorization.
 Return in this JSON format:
@@ -82,27 +83,27 @@ Return in this JSON format:
                 front: { type: "string" },
                 back: { type: "string" },
                 topic: { type: "string" },
-                difficulty: { type: "string" }
-              }
-            }
-          }
-        }
-      }
+                difficulty: { type: "string" },
+              },
+            },
+          },
+        },
+      },
     });
 
     for (const card of response.flashcards) {
       await createMutation.mutateAsync({
         front: card.front,
         back: card.back,
-        topic: card.topic || topic || 'General',
-        difficulty: card.difficulty || 'medium',
+        topic: card.topic || topic || "General",
+        difficulty: card.difficulty || "medium",
         verified: false,
-        shared: false
+        shared: false,
       });
     }
 
     setIsGenerating(false);
-    setTopic('');
+    setTopic("");
   };
 
   const toggleVerified = (card) => {
@@ -118,12 +119,19 @@ Return in this JSON format:
       <div className="max-w-5xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-10">
-          <Link to={createPageUrl('CourseManagement') + `?id=${courseId}`} className="inline-flex items-center text-slate-500 hover:text-slate-700 mb-6 group">
+          <Link
+            to={createPageUrl("CourseManagement") + `?id=${courseId}`}
+            className="inline-flex items-center text-slate-500 hover:text-slate-700 mb-6 group"
+          >
             <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             Back to Course
           </Link>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Manage Flashcards</h1>
-          <p className="text-slate-500 mt-2">Generate, verify, and share flashcards with students</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+            Manage Flashcards
+          </h1>
+          <p className="text-slate-500 mt-2">
+            Generate, verify, and share flashcards with students
+          </p>
         </div>
 
         {/* Generate Section */}
@@ -139,7 +147,7 @@ Return in this JSON format:
                   className="rounded-xl h-11"
                 />
               </div>
-              <Button 
+              <Button
                 onClick={generateFlashcards}
                 disabled={isGenerating}
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl px-6 h-11"
@@ -164,19 +172,25 @@ Return in this JSON format:
         <div className="grid grid-cols-3 gap-4 mb-8">
           <Card className="border-0 shadow-sm rounded-2xl">
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-semibold text-slate-900">{flashcards.length}</p>
+              <p className="text-2xl font-semibold text-slate-900">
+                {flashcards.length}
+              </p>
               <p className="text-sm text-slate-500">Total Cards</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm rounded-2xl">
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-semibold text-emerald-600">{flashcards.filter(f => f.verified).length}</p>
+              <p className="text-2xl font-semibold text-emerald-600">
+                {flashcards.filter((f) => f.verified).length}
+              </p>
               <p className="text-sm text-slate-500">Verified</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm rounded-2xl">
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-semibold text-indigo-600">{flashcards.filter(f => f.shared).length}</p>
+              <p className="text-2xl font-semibold text-indigo-600">
+                {flashcards.filter((f) => f.shared).length}
+              </p>
               <p className="text-sm text-slate-500">Shared</p>
             </CardContent>
           </Card>
@@ -187,26 +201,37 @@ Return in this JSON format:
           <Card className="border-dashed border-2 border-slate-200">
             <CardContent className="py-16 text-center">
               <Sparkles className="h-10 w-10 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">No flashcards yet. Generate some above!</p>
+              <p className="text-slate-500">
+                No flashcards yet. Generate some above!
+              </p>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4">
-            {flashcards.map(card => (
+            {flashcards.map((card) => (
               <Card key={card.id} className="border-0 shadow-sm rounded-2xl">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 pr-4">
-                      <p className="font-medium text-slate-900 mb-2">{card.front}</p>
+                      <p className="font-medium text-slate-900 mb-2">
+                        {card.front}
+                      </p>
                       <p className="text-sm text-slate-600 mb-3">{card.back}</p>
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="rounded-lg text-xs">{card.topic || 'General'}</Badge>
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="secondary"
+                          className="rounded-lg text-xs"
+                        >
+                          {card.topic || "General"}
+                        </Badge>
+                        <Badge
+                          variant="outline"
                           className={`rounded-lg text-xs ${
-                            card.difficulty === 'easy' ? 'border-emerald-200 text-emerald-700' :
-                            card.difficulty === 'hard' ? 'border-red-200 text-red-700' :
-                            'border-amber-200 text-amber-700'
+                            card.difficulty === "easy"
+                              ? "border-emerald-200 text-emerald-700"
+                              : card.difficulty === "hard"
+                                ? "border-red-200 text-red-700"
+                                : "border-amber-200 text-amber-700"
                           }`}
                         >
                           {card.difficulty}
@@ -218,7 +243,7 @@ Return in this JSON format:
                         variant={card.verified ? "default" : "outline"}
                         size="sm"
                         onClick={() => toggleVerified(card)}
-                        className={`rounded-lg ${card.verified ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                        className={`rounded-lg ${card.verified ? "bg-emerald-600 hover:bg-emerald-700" : ""}`}
                       >
                         <Check className="h-4 w-4" />
                       </Button>
@@ -226,7 +251,7 @@ Return in this JSON format:
                         variant={card.shared ? "default" : "outline"}
                         size="sm"
                         onClick={() => toggleShared(card)}
-                        className={`rounded-lg ${card.shared ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
+                        className={`rounded-lg ${card.shared ? "bg-indigo-600 hover:bg-indigo-700" : ""}`}
                       >
                         <Share2 className="h-4 w-4" />
                       </Button>

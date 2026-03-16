@@ -32,10 +32,10 @@ VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
 This repo now includes a backend in `backend/` with:
 
 - Role-based access (instructor + student)
-- Entity APIs for Course, Assignment, Submission, ChatSession, Flashcard, CourseEnrollment
+- Entity APIs for Course, Assignment, ChatSession, Flashcard, CourseEnrollment
 - RAG chat endpoint using uploaded course material
 - Local LLM support via Ollama
-- Assignment feedback endpoint with structured output
+- PDF-based assignments for upload and download
 - Dashboard analytics endpoints for time usage and period filters
 - GDPR export/anonymization endpoints
 

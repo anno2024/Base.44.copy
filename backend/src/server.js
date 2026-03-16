@@ -24,7 +24,6 @@ import {
   buildRagContextLexical,
 } from "./rag.js";
 import { invokeOllama, embedWithOllama, fallbackAnswer } from "./llm.js";
-import { parseFeedbackJson, fallbackFeedback } from "./feedback.js";
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -93,7 +92,7 @@ function canAccessRecord(entity, record, user) {
     return record.student_id === user.id;
   }
 
-  if (entity === "ChatSession" || entity === "Submission") {
+  if (entity === "ChatSession") {
     return record.student_id === user.id;
   }
 
@@ -191,7 +190,8 @@ async function extractText(filePath, mimetype) {
 
     if (isDocx) {
       const mammoth = await import("mammoth");
-      const extractor = mammoth.extractRawText || mammoth.default?.extractRawText;
+      const extractor =
+        mammoth.extractRawText || mammoth.default?.extractRawText;
       const output = await extractor({ path: filePath });
       return {
         content_text: sanitizeExtractedText(output?.value),
@@ -345,7 +345,12 @@ async function ensureCourseRagChunks({ db, course, sources }) {
   );
 
   if (current.length > 0) {
-    return { chunks: current, sourceSignature, indexed: false, indexing: false };
+    return {
+      chunks: current,
+      sourceSignature,
+      indexed: false,
+      indexing: false,
+    };
   }
 
   const textSources = sources.filter((source) => source.content_text?.trim());
@@ -642,10 +647,13 @@ app.post("/api/chat/respond", requireAuth, async (req, res) => {
   // Backfill legacy uploads that were saved before PDF/DOCX extraction was added.
   let hasUploadTextBackfill = false;
   for (const source of sourceEnriched) {
-    const upload = (db.uploads || []).find((item) => item.file_url === source.url);
+    const upload = (db.uploads || []).find(
+      (item) => item.file_url === source.url,
+    );
     if (!upload) continue;
     const hasText = Boolean(source.content_text?.trim());
-    const hasPages = Array.isArray(source.content_pages) && source.content_pages.length > 0;
+    const hasPages =
+      Array.isArray(source.content_pages) && source.content_pages.length > 0;
     const needsTextBackfill = !hasText;
     const needsPdfPageBackfill = !hasPages && isPdfUpload(upload);
 
@@ -664,7 +672,8 @@ app.post("/api/chat/respond", requireAuth, async (req, res) => {
       ? extracted.content_pages
       : [];
     const textChanged = upload.content_text !== nextText;
-    const pagesChanged = JSON.stringify(upload.content_pages || []) !== JSON.stringify(nextPages);
+    const pagesChanged =
+      JSON.stringify(upload.content_pages || []) !== JSON.stringify(nextPages);
     if (!textChanged && !pagesChanged) continue;
 
     upload.content_text = nextText;
@@ -767,53 +776,6 @@ app.post("/api/chat/respond", requireAuth, async (req, res) => {
   });
 });
 
-app.post(
-  "/api/assignments/:assignmentId/generate-feedback",
-  requireAuth,
-  async (req, res) => {
-    const { assignmentId } = req.params;
-    const { answers = [] } = req.body || {};
-
-    const db = await readDb();
-    const assignment = db.assignments.find((item) => item.id === assignmentId);
-    if (!assignment) {
-      return res.status(404).json({ message: "Assignment not found" });
-    }
-
-    const course = db.courses.find((item) => item.id === assignment.course_id);
-    const llmConfig = course?.llm_config || {};
-    const policyPrompt = buildPolicyPrompt({
-      course,
-      llmConfig,
-      mode: llmConfig.hint_only_mode ? "hint-only" : "normal",
-    });
-
-    const questionIds = (assignment.questions || []).map(
-      (question) => question.id,
-    );
-
-    const payloadPrompt = `Evaluate student submission and return strict JSON only.\n\nAssignment: ${assignment.title}\n\nQuestions: ${JSON.stringify(
-      assignment.questions || [],
-      null,
-      2,
-    )}\n\nAnswers: ${JSON.stringify(answers, null, 2)}\n\nRequired JSON:\n{\n  \"overall_comment\": \"string\",\n  \"strengths\": [\"string\"],\n  \"improvements\": [\"string\"],\n  \"next_steps\": [\"string\"],\n  \"question_feedback\": [{\"question_id\": \"string\", \"comment\": \"string\", \"score\": 0}]\n}`;
-
-    let feedback;
-    try {
-      const llmRaw = await invokeOllama({
-        prompt: payloadPrompt,
-        systemPrompt: policyPrompt,
-        responseFormat: "json",
-      });
-      feedback = parseFeedbackJson(llmRaw, questionIds);
-    } catch {
-      feedback = fallbackFeedback(questionIds);
-    }
-
-    return res.json({ feedback });
-  },
-);
-
 app.get(
   "/api/dashboard/overview",
   requireAuth,
@@ -891,7 +853,6 @@ app.get("/api/gdpr/export/me", requireAuth, async (req, res) => {
   return res.json({
     user: req.user,
     chatSessions: db.chatSessions.filter((item) => item.student_id === userId),
-    submissions: db.submissions.filter((item) => item.student_id === userId),
     enrollments: db.courseEnrollments.filter(
       (item) => item.student_id === userId,
     ),
@@ -911,17 +872,6 @@ app.delete("/api/gdpr/me", requireAuth, async (req, res) => {
             messages: [],
           }
         : session,
-    );
-
-    db.submissions = db.submissions.map((submission) =>
-      submission.student_id === userId
-        ? {
-            ...submission,
-            student_id: "deleted-user",
-            student_email: "deleted@example.com",
-            answers: [],
-          }
-        : submission,
     );
 
     db.courseEnrollments = db.courseEnrollments.filter(

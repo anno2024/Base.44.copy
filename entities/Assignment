@@ -12,57 +12,25 @@
     },
     "description": {
       "type": "string",
-      "description": "Assignment description and instructions"
+      "description": "Optional assignment instructions"
     },
-    "questions": {
-      "type": "array",
-      "description": "List of questions",
-      "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "text": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "points": {
-            "type": "number"
-          },
-          "rubric": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "due_date": {
+    "file_name": {
       "type": "string",
-      "format": "date-time"
+      "description": "Original PDF filename"
     },
-    "feedback_structure": {
-      "type": "object",
-      "description": "How feedback should be structured",
-      "properties": {
-        "categories": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "include_suggestions": {
-          "type": "boolean"
-        },
-        "include_strengths": {
-          "type": "boolean"
-        }
-      }
+    "pdf_url": {
+      "type": "string",
+      "description": "Uploaded PDF URL"
+    },
+    "uploaded_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Upload timestamp"
     }
   },
   "required": [
     "course_id",
-    "title"
+    "title",
+    "pdf_url"
   ]
 }

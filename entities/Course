@@ -6,10 +6,6 @@
       "type": "string",
       "description": "Course name"
     },
-    "code": {
-      "type": "string",
-      "description": "Course code (e.g., TDT4140)"
-    },
     "description": {
       "type": "string",
       "description": "Course description"
@@ -68,7 +64,6 @@
   },
   "required": [
     "name",
-    "code",
     "instructor_id"
   ]
 }

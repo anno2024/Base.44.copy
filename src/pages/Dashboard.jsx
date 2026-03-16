@@ -1,72 +1,76 @@
-import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
-import { 
-  BookOpen, 
-  Users, 
-  MessageSquare, 
+/* @ts-nocheck */
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import {
+  BookOpen,
+  Users,
+  MessageSquare,
   Clock,
   Plus,
   ChevronRight,
   Sparkles,
-  FileText
-} from 'lucide-react';
+  FileText,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
-  
+
   useEffect(() => {
     base44.auth.me().then(setUser);
   }, []);
 
   const { data: courses = [], isLoading: coursesLoading } = useQuery({
-    queryKey: ['courses'],
+    queryKey: ["courses"],
     queryFn: () => base44.entities.Course.list(),
   });
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
-    queryKey: ['sessions'],
-    queryFn: () => base44.entities.ChatSession.list('-created_date', 100),
+    queryKey: ["sessions"],
+    queryFn: () => base44.entities.ChatSession.list("-created_date", 100),
   });
 
   const { data: enrollments = [] } = useQuery({
-    queryKey: ['enrollments'],
+    queryKey: ["enrollments"],
     queryFn: () => base44.entities.CourseEnrollment.list(),
   });
 
   const { data: allAssignments = [] } = useQuery({
-    queryKey: ['allAssignments'],
+    queryKey: ["allAssignments"],
     queryFn: () => base44.entities.Assignment.list(),
   });
 
-  const { data: mySubmissions = [] } = useQuery({
-    queryKey: ['mySubmissions', user?.id],
-    queryFn: () => base44.entities.Submission.filter({ student_id: user?.id }),
-    enabled: !!user?.id
-  });
+  const isInstructor = user?.role === "admin";
 
-  const isInstructor = user?.role === 'admin';
-  
-  const myCourses = isInstructor 
-    ? courses.filter(c => c.instructor_id === user?.id)
-    : courses.filter(c => enrollments.some(e => e.course_id === c.id && e.student_id === user?.id));
+  const myCourses = isInstructor
+    ? courses.filter((c) => c.instructor_id === user?.id)
+    : courses.filter((c) =>
+        enrollments.some(
+          (e) => e.course_id === c.id && e.student_id === user?.id,
+        ),
+      );
 
-  const totalStudents = new Set(enrollments.map(e => e.student_id)).size;
+  const totalStudents = new Set(enrollments.map((e) => e.student_id)).size;
   const totalSessions = sessions.length;
-  const totalTimeMinutes = sessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+  const totalTimeMinutes = sessions.reduce(
+    (acc, s) => acc + (s.duration_minutes || 0),
+    0,
+  );
 
   // Student-specific data
-  const mySessions = sessions.filter(s => s.student_id === user?.id);
-  const myStudyTime = mySessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
-  const myAssignments = allAssignments.filter(a => myCourses.some(c => c.id === a.course_id));
-  const completedAssignments = mySubmissions.filter(s => s.status === 'submitted').length;
-
-  const recentSessions = sessions.slice(0, 5);
+  const mySessions = sessions.filter((s) => s.student_id === user?.id);
+  const myStudyTime = mySessions.reduce(
+    (acc, s) => acc + (s.duration_minutes || 0),
+    0,
+  );
+  const myAssignments = allAssignments.filter((a) =>
+    myCourses.some((c) => c.id === a.course_id),
+  );
 
   if (coursesLoading) {
     return (
@@ -74,7 +78,9 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto space-y-8">
           <Skeleton className="h-12 w-64" />
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[1,2,3,4].map(i => <Skeleton key={i} className="h-32 rounded-2xl" />)}
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-32 rounded-2xl" />
+            ))}
           </div>
         </div>
       </div>
@@ -91,81 +97,86 @@ export default function Dashboard() {
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-              Welcome back{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}
+              Welcome back
+              {user?.full_name ? `, ${user.full_name.split(" ")[0]}` : ""}
             </h1>
           </div>
           <p className="text-slate-500 text-lg ml-[52px]">
-            {isInstructor ? 'Manage your courses and track student progress' : 'Continue your learning journey'}
+            {isInstructor
+              ? "Manage your courses and track student progress"
+              : "Continue your learning journey"}
           </p>
         </div>
 
         {/* Stats Grid */}
         {isInstructor ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
-            <StatCard 
-              icon={BookOpen} 
-              label="Active Courses" 
+            <StatCard
+              icon={BookOpen}
+              label="Active Courses"
               value={myCourses.length}
               gradient="from-blue-500 to-cyan-500"
             />
-            <StatCard 
-              icon={Users} 
-              label="Total Students" 
+            <StatCard
+              icon={Users}
+              label="Total Students"
               value={totalStudents}
               gradient="from-emerald-500 to-teal-500"
             />
-            <StatCard 
-              icon={MessageSquare} 
-              label="Chat Sessions" 
+            <StatCard
+              icon={MessageSquare}
+              label="Chat Sessions"
               value={totalSessions}
               gradient="from-violet-500 to-purple-500"
             />
-            <StatCard 
-              icon={Clock} 
-              label="Learning Hours" 
+            <StatCard
+              icon={Clock}
+              label="Learning Hours"
               value={Math.round(totalTimeMinutes / 60)}
               gradient="from-orange-500 to-amber-500"
             />
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
-            <StatCard 
-              icon={BookOpen} 
-              label="Enrolled Courses" 
+            <StatCard
+              icon={BookOpen}
+              label="Enrolled Courses"
               value={myCourses.length}
               gradient="from-blue-500 to-cyan-500"
             />
-            <StatCard 
-              icon={Clock} 
-              label="Study Hours" 
+            <StatCard
+              icon={Clock}
+              label="Study Hours"
               value={Math.round(myStudyTime / 60)}
               gradient="from-emerald-500 to-teal-500"
             />
-            <StatCard 
-              icon={MessageSquare} 
-              label="Chat Sessions" 
+            <StatCard
+              icon={MessageSquare}
+              label="Chat Sessions"
               value={mySessions.length}
               gradient="from-violet-500 to-purple-500"
             />
-            <StatCard 
-              icon={FileText} 
-              label="Assignments Done" 
-              value={completedAssignments}
+            <StatCard
+              icon={FileText}
+              label="Assignments"
+              value={myAssignments.length}
               gradient="from-orange-500 to-amber-500"
             />
           </div>
         )}
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div
+          className={`grid grid-cols-1 gap-8 ${isInstructor ? "" : "lg:grid-cols-3"}`}
+        >
           {/* Courses Section */}
-          <div className="lg:col-span-2">
+          <div className={isInstructor ? "" : "lg:col-span-2"}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-slate-900">
-                {isInstructor ? 'Your Courses' : 'My Courses'}
+                {isInstructor ? "Your Courses" : "My Courses"}
               </h2>
               {isInstructor && (
-                <Link to={createPageUrl('CreateCourse')}>
+                <Link to={createPageUrl("CreateCourse")}>
                   <Button className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-5">
                     <Plus className="h-4 w-4 mr-2" />
                     New Course
@@ -181,25 +192,34 @@ export default function Dashboard() {
                     <BookOpen className="h-7 w-7 text-slate-400" />
                   </div>
                   <h3 className="text-lg font-medium text-slate-900 mb-2">
-                    {isInstructor ? 'No courses yet' : 'Not enrolled in any courses'}
+                    {isInstructor
+                      ? "No courses yet"
+                      : "Not enrolled in any courses"}
                   </h3>
                   <p className="text-slate-500 mb-6">
-                    {isInstructor 
-                      ? 'Create your first course to get started'
-                      : 'Browse available courses to enroll'
-                    }
+                    {isInstructor
+                      ? "Create your first course to get started"
+                      : "Browse available courses to enroll"}
                   </p>
-                  <Link to={createPageUrl(isInstructor ? 'CreateCourse' : 'BrowseCourses')}>
+                  <Link
+                    to={createPageUrl(
+                      isInstructor ? "CreateCourse" : "BrowseCourses",
+                    )}
+                  >
                     <Button className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl">
-                      {isInstructor ? 'Create Course' : 'Browse Courses'}
+                      {isInstructor ? "Create Course" : "Browse Courses"}
                     </Button>
                   </Link>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid gap-4">
-                {myCourses.map(course => (
-                  <CourseCard key={course.id} course={course} isInstructor={isInstructor} />
+                {myCourses.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    isInstructor={isInstructor}
+                  />
                 ))}
               </div>
             )}
@@ -208,7 +228,9 @@ export default function Dashboard() {
           {/* Activity Feed - Student */}
           {!isInstructor && (
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-6">Recent Activity</h2>
+              <h2 className="text-xl font-semibold text-slate-900 mb-6">
+                Recent Activity
+              </h2>
               <Card className="border-0 shadow-sm bg-white rounded-2xl">
                 <CardContent className="p-0">
                   {mySessions.length === 0 ? (
@@ -218,18 +240,27 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="divide-y divide-slate-100">
-                      {mySessions.slice(0, 5).map(session => (
-                        <div key={session.id} className="p-4 hover:bg-slate-50 transition-colors">
+                      {mySessions.slice(0, 5).map((session) => (
+                        <div
+                          key={session.id}
+                          className="p-4 hover:bg-slate-50 transition-colors"
+                        >
                           <div className="flex items-start gap-3">
                             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center flex-shrink-0">
                               <MessageSquare className="h-4 w-4 text-indigo-600" />
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-slate-900 truncate">
-                                {session.title || 'Chat Session'}
+                                {session.title || "Chat Session"}
                               </p>
                               <p className="text-xs text-slate-500 mt-0.5">
-                                {session.duration_minutes ? `${session.duration_minutes} min` : 'In progress'} • {new Date(session.created_date).toLocaleDateString()}
+                                {session.duration_minutes
+                                  ? `${session.duration_minutes} min`
+                                  : "In progress"}{" "}
+                                •{" "}
+                                {new Date(
+                                  session.created_date,
+                                ).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
@@ -240,42 +271,81 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Upcoming Assignments */}
+              {/* Course Assignments */}
               {myAssignments.length > 0 && (
                 <div className="mt-6">
-                  <h2 className="text-xl font-semibold text-slate-900 mb-6">Upcoming Assignments</h2>
+                  <h2 className="text-xl font-semibold text-slate-900 mb-6">
+                    Course Assignments
+                  </h2>
                   <Card className="border-0 shadow-sm bg-white rounded-2xl">
                     <CardContent className="p-0">
                       <div className="divide-y divide-slate-100">
-                        {myAssignments.slice(0, 3).map(assignment => {
-                          const isSubmitted = mySubmissions.some(s => s.assignment_id === assignment.id && s.status === 'submitted');
+                        {myAssignments.slice(0, 3).map((assignment) => {
                           return (
-                            <Link key={assignment.id} to={createPageUrl('Assignment') + `?id=${assignment.id}`}>
-                              <div className="p-4 hover:bg-slate-50 transition-colors">
-                                <div className="flex items-start gap-3">
-                                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                                    <FileText className="h-4 w-4 text-emerald-600" />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center justify-between">
+                            <div
+                              key={assignment.id}
+                              className="p-4 hover:bg-slate-50 transition-colors"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
+                                  <FileText className="h-4 w-4 text-emerald-600" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div>
                                       <p className="text-sm font-medium text-slate-900 truncate">
                                         {assignment.title}
                                       </p>
-                                      {isSubmitted && (
-                                        <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                                          Submitted
-                                        </span>
-                                      )}
-                                    </div>
-                                    {assignment.due_date && (
                                       <p className="text-xs text-slate-500 mt-0.5">
-                                        Due: {new Date(assignment.due_date).toLocaleDateString()}
+                                        {assignment.file_name ||
+                                          "PDF assignment"}
                                       </p>
+                                    </div>
+                                    {assignment.pdf_url ? (
+                                      <div className="flex gap-2">
+                                        <a
+                                          href={assignment.pdf_url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                        >
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-lg"
+                                          >
+                                            Open
+                                          </Button>
+                                        </a>
+                                        <a
+                                          href={assignment.pdf_url}
+                                          download={
+                                            assignment.file_name ||
+                                            assignment.title
+                                          }
+                                        >
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-lg"
+                                          >
+                                            Download
+                                          </Button>
+                                        </a>
+                                      </div>
+                                    ) : (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="rounded-lg"
+                                        disabled
+                                      >
+                                        PDF unavailable
+                                      </Button>
                                     )}
                                   </div>
                                 </div>
                               </div>
-                            </Link>
+                            </div>
                           );
                         })}
                       </div>
@@ -283,43 +353,6 @@ export default function Dashboard() {
                   </Card>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Activity Feed - Instructor */}
-          {isInstructor && (
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-6">Recent Activity</h2>
-              <Card className="border-0 shadow-sm bg-white rounded-2xl">
-                <CardContent className="p-0">
-                  {recentSessions.length === 0 ? (
-                    <div className="py-12 text-center">
-                      <MessageSquare className="h-8 w-8 text-slate-300 mx-auto mb-3" />
-                      <p className="text-slate-500">No recent activity</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {recentSessions.map(session => (
-                        <div key={session.id} className="p-4 hover:bg-slate-50 transition-colors">
-                          <div className="flex items-start gap-3">
-                            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center flex-shrink-0">
-                              <MessageSquare className="h-4 w-4 text-indigo-600" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-slate-900 truncate">
-                                {session.title || 'Chat Session'}
-                              </p>
-                              <p className="text-xs text-slate-500 mt-0.5">
-                                {session.student_email} • {session.duration_minutes ? `${session.duration_minutes} min` : 'In progress'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           )}
         </div>
@@ -337,7 +370,9 @@ function StatCard({ icon: Icon, label, value, gradient }) {
             <p className="text-sm text-slate-500 mb-1">{label}</p>
             <p className="text-3xl font-semibold text-slate-900">{value}</p>
           </div>
-          <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+          <div
+            className={`h-12 w-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center`}
+          >
             <Icon className="h-6 w-6 text-white" />
           </div>
         </div>
@@ -348,7 +383,12 @@ function StatCard({ icon: Icon, label, value, gradient }) {
 
 function CourseCard({ course, isInstructor }) {
   return (
-    <Link to={createPageUrl(isInstructor ? 'CourseManagement' : 'StudentCourse') + `?id=${course.id}`}>
+    <Link
+      to={
+        createPageUrl(isInstructor ? "CourseManagement" : "StudentCourse") +
+        `?id=${course.id}`
+      }
+    >
       <Card className="border-0 shadow-sm bg-white rounded-2xl hover:shadow-md transition-all duration-200 cursor-pointer group">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
@@ -360,7 +400,6 @@ function CourseCard({ course, isInstructor }) {
                 <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
                   {course.name}
                 </h3>
-                <p className="text-sm text-slate-500">{course.code}</p>
               </div>
             </div>
             <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />

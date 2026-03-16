@@ -34,7 +34,6 @@ function createInitialData() {
     courseEnrollments: [],
     chatSessions: [],
     assignments: [],
-    submissions: [],
     flashcards: [],
     uploads: [],
     appLogs: [],
@@ -54,7 +53,6 @@ function normalizeDbShape(db) {
       : [],
     chatSessions: Array.isArray(db?.chatSessions) ? db.chatSessions : [],
     assignments: Array.isArray(db?.assignments) ? db.assignments : [],
-    submissions: Array.isArray(db?.submissions) ? db.submissions : [],
     flashcards: Array.isArray(db?.flashcards) ? db.flashcards : [],
     uploads: Array.isArray(db?.uploads) ? db.uploads : [],
     appLogs: Array.isArray(db?.appLogs) ? db.appLogs : [],
@@ -109,7 +107,6 @@ const entityMap = {
   CourseEnrollment: "courseEnrollments",
   ChatSession: "chatSessions",
   Assignment: "assignments",
-  Submission: "submissions",
   Flashcard: "flashcards",
 };
 
@@ -147,11 +144,11 @@ export async function writeDb(updater) {
   writeQueue = writeQueue
     .catch(() => null)
     .then(async () => {
-    const current = await readDb();
-    const next = await updater(current);
-    const normalized = normalizeDbShape(next);
-    await writeDbFileAtomically(normalized);
-    return normalized;
+      const current = await readDb();
+      const next = await updater(current);
+      const normalized = normalizeDbShape(next);
+      await writeDbFileAtomically(normalized);
+      return normalized;
     });
   return writeQueue;
 }

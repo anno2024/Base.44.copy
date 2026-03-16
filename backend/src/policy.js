@@ -6,7 +6,7 @@ export function buildPolicyPrompt({ course, llmConfig, mode }) {
   const hintOnly = Boolean(config.hint_only_mode) || mode === "hint-only";
 
   return [
-    `You are an academic assistant for course \"${course?.name || "Unknown"}\" (${course?.code || "N/A"}).`,
+    `You are an academic assistant for course \"${course?.name || "Unknown"}\".`,
     `Language: ${language}`,
     `Tone: ${tone}`,
     `Max help level: ${maxHelp}`,

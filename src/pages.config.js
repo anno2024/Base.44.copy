@@ -1,29 +1,29 @@
 /**
  * pages.config.js - Page routing configuration
- * 
+ *
  * This file is AUTO-GENERATED. Do not add imports or modify PAGES manually.
  * Pages are auto-registered when you create files in the ./pages/ folder.
- * 
+ *
  * THE ONLY EDITABLE VALUE: mainPage
  * This controls which page is the landing page (shown when users visit the app).
- * 
+ *
  * Example file structure:
- * 
+ *
  *   import HomePage from './pages/HomePage';
  *   import Dashboard from './pages/Dashboard';
  *   import Settings from './pages/Settings';
- *   
+ *
  *   export const PAGES = {
  *       "HomePage": HomePage,
  *       "Dashboard": Dashboard,
  *       "Settings": Settings,
  *   }
- *   
+ *
  *   export const pagesConfig = {
  *       mainPage: "HomePage",
  *       Pages: PAGES,
  *   };
- * 
+ *
  * Example with Layout (wraps all pages):
  *
  *   import Home from './pages/Home';
@@ -47,32 +47,27 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import CreateCourse from './pages/CreateCourse';
-import CourseManagement from './pages/CourseManagement';
-import StudentCourse from './pages/StudentCourse';
-import BrowseCourses from './pages/BrowseCourses';
-import CreateAssignment from './pages/CreateAssignment';
-import Assignment from './pages/Assignment';
-import ManageFlashcards from './pages/ManageFlashcards';
-import StudyFlashcards from './pages/StudyFlashcards';
-import Dashboard from './pages/Dashboard';
-import __Layout from './Layout.jsx';
-
+import CreateCourse from "./pages/CreateCourse";
+import CourseManagement from "./pages/CourseManagement";
+import StudentCourse from "./pages/StudentCourse";
+import BrowseCourses from "./pages/BrowseCourses";
+import ManageFlashcards from "./pages/ManageFlashcards";
+import StudyFlashcards from "./pages/StudyFlashcards";
+import Dashboard from "./pages/Dashboard";
+import __Layout from "./Layout.jsx";
 
 export const PAGES = {
-    "CreateCourse": CreateCourse,
-    "CourseManagement": CourseManagement,
-    "StudentCourse": StudentCourse,
-    "BrowseCourses": BrowseCourses,
-    "CreateAssignment": CreateAssignment,
-    "Assignment": Assignment,
-    "ManageFlashcards": ManageFlashcards,
-    "StudyFlashcards": StudyFlashcards,
-    "Dashboard": Dashboard,
-}
+  CreateCourse: CreateCourse,
+  CourseManagement: CourseManagement,
+  StudentCourse: StudentCourse,
+  BrowseCourses: BrowseCourses,
+  ManageFlashcards: ManageFlashcards,
+  StudyFlashcards: StudyFlashcards,
+  Dashboard: Dashboard,
+};
 
 export const pagesConfig = {
-    mainPage: "Dashboard",
-    Pages: PAGES,
-    Layout: __Layout,
+  mainPage: "Dashboard",
+  Pages: PAGES,
+  Layout: __Layout,
 };
