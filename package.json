@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "backend:dev": "npm --prefix backend run dev",
-    "backend:start": "npm --prefix backend run start",
+    "ollama:start": "node scripts/ensure-ollama.mjs",
+    "backend:dev": "node scripts/ensure-ollama.mjs && npm --prefix backend run dev",
+    "backend:start": "node scripts/ensure-ollama.mjs && npm --prefix backend run start",
     "build": "vite build",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
