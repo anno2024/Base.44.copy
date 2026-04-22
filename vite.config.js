@@ -6,6 +6,19 @@ import path from "node:path";
 // https://vite.dev/config/
 export default defineConfig({
   logLevel: "error", // Suppress warnings, only show errors
+  server: {
+    allowedHosts: [".ngrok-free.dev", ".ngrok-free.app"],
+    proxy: {
+      "/api": {
+        target: "http://localhost:4000",
+        changeOrigin: false,
+      },
+      "/uploads": {
+        target: "http://localhost:4000",
+        changeOrigin: false,
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(process.cwd(), "src"),

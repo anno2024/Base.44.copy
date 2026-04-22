@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 const AuthContext = createContext();
 

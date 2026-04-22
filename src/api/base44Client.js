@@ -1,8 +1,7 @@
 // @ts-nocheck
 import { appParams } from "@/lib/app-params";
 
-const API_BASE_URL =
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "";
 
 const ACCESS_TOKEN_STORAGE_KEY = "base44_access_token";
 
