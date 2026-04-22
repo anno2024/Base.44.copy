@@ -25,7 +25,7 @@ import ReactMarkdown from "react-markdown";
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "";
 const CHAT_REQUEST_TIMEOUT_MS = Number(
-  import.meta.env.VITE_CHAT_TIMEOUT_MS || 60000,
+  import.meta.env.VITE_CHAT_TIMEOUT_MS || 180000,
 );
 
 export default function StudentCourse() {

@@ -1,4 +1,4 @@
-const DEFAULT_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 45000);
+const DEFAULT_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 180000);
 
 async function withTimeout(promise, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -17,7 +17,7 @@ export async function invokeOllama({
   responseFormat = "text",
 }) {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const model = process.env.OLLAMA_MODEL || "llama3.1:8b";
+  const model = process.env.OLLAMA_MODEL || "qwen2.5:7b-instruct";
 
   const payload = {
     model,
